@@ -1,7 +1,18 @@
-// Under Z Engine 2017 */
+/* UnderZ Library 2018 */
 
 (function( window ) {
-	
+// Function.callSelf(args) = Function.apply( Function, args )
+if(typeof Function.prototype.callSelf !== 'function')
+    Function.prototype.callSelf = function( args ) { args = args || [];
+        return this.apply( this, args );
+    };
+
+// Function.bindSelf(args) = Function.bind( Function, args )
+if(typeof Function.prototype.bindSelf !== 'function')
+    Function.prototype.bindSelf = function( args ) { args = args || [];
+        return this.bind( this, args );
+    };
+
 // Array.pushSetter='value' => Array.push( 'value' )
 if(typeof Array.prototype.pushSetter !== 'function')
 	Object.defineProperty( Array.prototype, 'pushSetter', { set: function(v) { return this.push(v); }, configurable: false} );
@@ -124,7 +135,7 @@ var
 	globaljQuery = window["jQuery"] || new Function("return false"),
 
 	// engine version
-	version = '0.0.8 b-17',
+	version = '0.0.9 b-1',
 	
 	// prototypes of objects
 	protos = {
@@ -368,246 +379,275 @@ var
 			};
 		return ( isset($var) ? _vanilla[ $var ] : _vanilla);
 	},
-	
-	// elements functions
-	elmFunc = {
-		// Element.matches() polyfill
-		matches: function elementMatches() {
-			var matchesFunction = protos.element.matches ||
-					protos.element.matchesSelector ||
-					protos.element.mozMatchesSelector ||
-					protos.element.msMatchesSelector ||
-					protos.element.oMatchesSelector ||
-					protos.element.webkitMatchesSelector ||
-					function( s ) {
-						var _matches = (this.document || this.ownerDocument).querySelectorAll( s ),
-							i = _matches.length;
-						while (--i >= 0 && _matches.item( i ) !== this) {}
-						return i > -1;
-					};
-			
-			var element = arguments[0] || false,
-				arg = subArray( 1, arguments );
-			return matchesFunction.apply( element, arg );
-		},
-		
-		// Element.matchesAll() polyfill
-		matchesAll: function elementMatchesAll( elm, $elm, $not ) {
-			var ArgLen = arguments.length || 0;
-			var tunning = fns.turny({
-							arg: arguments,
-							self: this,
-							last: undefined
-						});
-			tunning = tunning.call(tunning, 'end');
-			elm = tunning[0] || undefined;
-			$elm = tunning[1] || undefined;
-			$not = tunning[2] || false;
-			
-			if( arguments.length==1 )
-				$elm = elm,
-				elm = this;
-			
-			var $return = [];
-			if( arguments.length )
-			{
-				$elm = _z( typeOfVar($elm)==='string' ? [ $elm ] : $elm );
-				
-				elmFunc.elmLoop( elm, function( e ) {
-					var $currentElement = [];
-					elmFunc.elmLoop( _z( $elm ), function( e2 ) {
-						
-						if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))=='string' )
-							$currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
-						else
-							$currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
-						
-					}, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
-					
-					if( filterArray( $currentElement ).length === $elm.length ) $return.push( e );
-				}, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
-				
-				$return = filterArray( $return );
-			}
-			
-			if( is_z(this) )
-			{
-				var newInstance = this.newSelector( $return );
-				newInstance.args = arguments;
-				newInstance.selector = $elm;
-				
-				return newInstance;
-			}
-			else return _z( $return );
-		},
-		
-		// prepare css style
-		prepareCSS: function prepareCSS( css ) {
-			if( _z.is_z( css ) )
-				return (_z.trim(css)||"").replace( /^-ms-/, "ms-" ).replace( /-([\da-z])/gi, ( all, fst)=>fst.toUpperCase() ) || "";
-			
-			var s = {};
-			if( !!!css ) return s;
-			
-			if( css instanceof CSSStyleDeclaration ) {
-				for( var i in css )
-					if( (css[i]).toLowerCase )
-						s[ (css[i]).toLowerCase() ] = ( css[ css[i] ] );
-			
-			}
-			else if( typeof css == "string" ) {
-				css = css.split("; ");
-				for( var i in css )
-					if( css[i] && typeof css[i]!='object' && typeof css[i]!='function' )
-						try {
-							var l = css[i].split(": ");
-							s[ l[0].toLowerCase() ] = ( l[1] );
-						}
-						catch(e)
-						{
-							console.warn( [ css[i], !!!css[i] ] );
-						}
-			}
-			
-			return s;
-		},
 
-		// set or get element prop
-		elmLoop: function elmLoop( elm, callback, tester ) {
-			if( !!!elm )
-				elm = this;
-			
-			if( !!!_z.is_z( elm ) )
-				elm = _z( elm );
-			
-			if( !!!callback || !_z.isFunction( callback ))
-				callback = fns.ef;
-			
-			var $results = [];
-			if( elm.length )
-			{
-				var $this = this,
-					tester = tester&&_z.isFunction(tester) ? tester : (x)=>_z(x).isDOMElement( true );
-				elm.each(function( i, e ){
-					if( tester(e) )
-						return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
-				});
-				
-				// return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
-			}
-			// else
-				// return undefined;
-			return $results;
-		},
-		
-		// insert adjacent element
-		insertAdjacentElement: function insertElement( $val, $q ) {
-			if( !isset( $val ) || ( !_z.is_z( $val ) && !_z.isDOM( $val ) && !_z.isString( $val ) ) || !this.length )
-				return this;
-			
-			if( ( _z.isDOM($val)||!_z.is_z($val) ) && !_z.isTypes( 'str', $val) )
-				$val = _z($val);
-			
-			var elm = this,
-				$q = $q || 'beforebegin';
-			elmFunc.elmLoop( elm, function( e ) {
-				if( !e['insertAdjacentElement'] )
-					return;
-				
-				if( !_z.isTypes( 'str', $val) )
-					$val.for( function( key, value ) {
-						if( _z.isDOM( value ) )
-							e['insertAdjacentElement']( $q, value );
-					});
-				else
-					e['insertAdjacentHTML']( $q, $val );
-			});
-			return this;
-		},
-		
-		// fade element/s
-		fade: function fadeElement( $q, speed, callback ) {
-			var elm = this,
-				$q = $q || 'In',
-				opacityValue = { In:0, Out:1 };
-			
-			elm.css( 'opacity', opacityValue[ $q ] );
-			
-			var tick = function() {
-				if( _z.size( gVar[ 'fade' ] ) && 
-						gVar[ 'fade' ][ 'tick' ] != tick && 
-							gVar[ 'fade' ][ 'elm' ] == tick.elm 
-				)
-					return false;
-					
-				var fstElement = tick.elm.element(0);
-				// tick.opacity = tick.q=='In'? 
-						// ( +(tick.opacity)+((new Date() - tick.last) / 400) ) : 
-							// ( +(tick.opacity)-((new Date() - tick.last) / 400) );
-				tick.opacity = tick.q=='In'? 
-						( +(tick.opacity)+(tick.lastVal) ) : 
-							( +(tick.opacity)-(tick.lastVal) );
-				tick.elm.css( 'opacity', tick.opacity);
-				tick.last = +new Date();
-				
-				if(
-					(tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < 1) || 
-					(tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > 0)
-				)
-				{
-					// (gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) || 
-					// (gVar['fade'].timeOut=setTimeout(tick, tick.speed));
-					setTimeout(function(){
-						(gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) || 
-						(gVar['fade'].timeOut=setTimeout(tick, tick.speed))
-					}, 16);
-				}
-				else
-				{
-					elm.css( 'opacity', +!opacityValue[ tick.q ] ), gVar[ 'fade' ] = {};
-					
-					if(tick.q=='Out')
-						tick.elm.hide();
-					
-					if( _z.isFunction(tick.callback) )
-						tick.callback.call(elm, elm);
-				}
-			};
-			
-			tick.q = $q;
-			tick.last = +new Date();
-			tick.elm = elm;
-			tick.speed = parseInt(speed)||1000;
-			tick.lastVal = ((1/ ((tick.speed/1000)||1) )/10)||0.25;
-			tick.opacity = opacityValue[ $q ];
-			tick.callback = _z.isFunction(callback) ? callback : false;
-			
-			// check if other fade on this element
-			if( isset(gVar[ 'fade' ]) && 
-					_z.size(gVar[ 'fade' ]) && 
-						gVar[ 'fade' ][ 'tick' ] != tick && 
-							gVar[ 'fade' ][ 'elm' ] == tick.elm
-			)
-			{
-				if( gVar[ 'fade' ][ 'aftimeOut' ] )
-					cancelAnimationFrame( gVar[ 'fade' ][ 'aftimeOut' ] );
-				else if( gVar[ 'fade' ][ 'timeOut' ] )
-					clearTimeout( gVar[ 'fade' ][ 'timeOut' ] );
-			}
-			
-			gVar[ 'fade' ] = gVar[ 'fade' ]||{};
-			gVar[ 'fade' ][ 'tick' ] = tick;
-			gVar[ 'fade' ][ 'elm' ] = tick.elm;
-			
-			if($q=='In')
-				elm.show();
-			
-			tick();
-			return this;
-		},
-		
-	},
-	
+    // clone object
+    cloneObj = function cloneObj( obj ) {
+        try {
+            var copy = Object.create( Object.getPrototypeOf( obj ) ),
+                propNames = Object.getOwnPropertyNames( obj );
+
+            propNames.forEach(function( name ) {
+                var desc = Object.getOwnPropertyDescriptor( obj, name );
+                Object.defineProperty( copy, name, desc );
+            });
+
+            return copy;
+        } catch(e) {
+            console.error( e );
+            return obj;
+        }
+    },
+
+    // Element.matches function
+    matchesFunction = protos.element.matches ||
+        protos.element.matchesSelector ||
+        protos.element.mozMatchesSelector ||
+        protos.element.msMatchesSelector ||
+        protos.element.oMatchesSelector ||
+        protos.element.webkitMatchesSelector ||
+        function( s ) {
+            var _matches = (this.document || this.ownerDocument).querySelectorAll( s ),
+                i = _matches.length;
+            while (--i >= 0 && _matches.item( i ) !== this) {}
+            return i > -1;
+        },
+
+    // elements functions
+    elmFunc = {
+        // Element.matches() polyfill
+        matches: function elementMatches() {
+            var element = arguments[0] || false,
+                arg = subArray( 1, arguments );
+            try {
+                return matchesFunction.apply( element, arg );
+            } catch(e1) {
+                console.error(e1);
+                return false;
+            }
+        },
+
+        // Element.matchesAll() polyfill
+        matchesAll: function elementMatchesAll( elm, $elm, $not ) {
+            var ArgLen = arguments.length || 0;
+            var tunning = fns.turny({
+                arg: arguments,
+                self: this,
+                last: undefined
+            });
+            tunning = tunning.call(tunning, 'end');
+            elm = tunning[0] || undefined;
+            $elm = tunning[1] || undefined;
+            $not = tunning[2] || false;
+
+            if( arguments.length==1 )
+                $elm = elm,
+                    elm = this;
+
+            var $return = [];
+            if( arguments.length )
+            {
+                $elm = _z( typeOfVar($elm)==='string' ? [ $elm ] : $elm );
+
+                elmFunc.elmLoop( elm, function( e ) {
+                    var $currentElement = [];
+                    elmFunc.elmLoop( _z( $elm ), function( e2 ) {
+
+                        if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))=='string' )
+                            $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
+                        else
+                            $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
+
+                    }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
+
+                    if( filterArray( $currentElement ).length === $elm.length ) $return.push( e );
+                }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
+
+                $return = filterArray( $return );
+            }
+
+            if( is_z(this) )
+            {
+                var newInstance = this.newSelector( $return );
+                newInstance.args = arguments;
+                newInstance.selector = $elm;
+
+                return newInstance;
+            }
+            else return _z( $return );
+        },
+
+        // prepare css style
+        prepareCSS: function prepareCSS( css ) {
+            if( _z.is_z( css ) )
+                return (_z.trim(css)||"").replace( /^-ms-/, "ms-" ).replace( /-([\da-z])/gi, ( all, fst)=>fst.toUpperCase() ) || "";
+
+            var s = {};
+            if( !!!css ) return s;
+
+            if( css instanceof CSSStyleDeclaration ) {
+                for( var i in css )
+                    if( (css[i]).toLowerCase )
+                        if( !!css[ css[i] ] || css[ css[i] ] == "" )
+                            s[ (css[i]).toLowerCase() ] = ( css[ css[i] ] );
+
+            }
+            else if( typeof css == "string" ) {
+                css = css.split("; ");
+                for( var i in css )
+                    if( css[i] && typeof css[i]!='object' && typeof css[i]!='function' )
+                        try {
+                            var l = css[i].split(": ");
+                            if( !!l[1] || l[1] == "" )
+                                s[ l[0].toLowerCase() ] = ( l[1] );
+                        }
+                        catch(e)
+                        {
+                            console.warn( [ css[i], !!!css[i] ] );
+                        }
+            }
+
+            return s;
+        },
+
+        // set or get element prop
+        elmLoop: function elmLoop( elm, callback, tester ) {
+            if( !!!elm )
+                elm = this;
+
+            if( !!!_z.is_z( elm ) )
+                elm = _z( elm );
+
+            if( !!!callback || !_z.isFunction( callback ))
+                callback = fns.ef;
+
+            var $results = [];
+            if( elm.length )
+            {
+                var $this = this,
+                    tester = tester&&_z.isFunction(tester) ? tester : (x)=>_z(x).isDOMElement( true );
+                if( elm.length == 1 && (e = elm[0]) ) {
+                    if( tester(e) )
+                        ( $results.pushSetter = callback.apply( $this, [ e, 0 ]) );
+                } else
+                    elm.each(function( i, e ){
+                        if( tester(e) )
+                            return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
+                    });
+
+                // return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
+            }
+            // else
+            // return undefined;
+            return $results;
+        },
+
+        // insert adjacent element
+        insertAdjacentElement: function insertElement( $val, $q ) {
+            if( !isset( $val ) || ( !_z.is_z( $val ) && !_z.isDOM( $val ) && !_z.isString( $val ) ) || !this.length )
+                return this;
+
+            if( ( _z.isDOM($val)||!_z.is_z($val) ) && !_z.isTypes( 'str', $val) )
+                $val = _z($val);
+
+            var elm = this,
+                $q = $q || 'beforebegin';
+            elmFunc.elmLoop( elm, function( e ) {
+                if( !e['insertAdjacentElement'] )
+                    return;
+
+                if( !_z.isTypes( 'str', $val) )
+                    $val.for( function( key, value ) {
+                        if( _z.isDOM( value ) )
+                            e['insertAdjacentElement']( $q, value );
+                    });
+                else
+                    e['insertAdjacentHTML']( $q, $val );
+            });
+            return this;
+        },
+
+        // fade element/s
+        fade: function fadeElement( $q, speed, callback ) {
+            var elm = this,
+                $q = $q || 'In',
+                opacityValue = { In:0, Out:1 };
+
+            elm.css( 'opacity', opacityValue[ $q ] );
+
+            var tick = function() {
+                if( _z.size( gVar[ 'fade' ] ) &&
+                    gVar[ 'fade' ][ 'tick' ] != tick &&
+                    gVar[ 'fade' ][ 'elm' ] == tick.elm
+                )
+                    return false;
+
+                var fstElement = tick.elm.element(0);
+                // tick.opacity = tick.q=='In'?
+                // ( +(tick.opacity)+((new Date() - tick.last) / 400) ) :
+                // ( +(tick.opacity)-((new Date() - tick.last) / 400) );
+                tick.opacity = tick.q=='In'?
+                    ( +(tick.opacity)+(tick.lastVal) ) :
+                    ( +(tick.opacity)-(tick.lastVal) );
+                tick.elm.css( 'opacity', tick.opacity);
+                tick.last = +new Date();
+
+                if(
+                    (tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < 1) ||
+                    (tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > 0)
+                )
+                {
+                    // (gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) ||
+                    // (gVar['fade'].timeOut=setTimeout(tick, tick.speed));
+                    setTimeout(function(){
+                        (gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) ||
+                        (gVar['fade'].timeOut=setTimeout(tick, tick.speed))
+                    }, 16);
+                }
+                else
+                {
+                    elm.css( 'opacity', +!opacityValue[ tick.q ] ), gVar[ 'fade' ] = {};
+
+                    if(tick.q=='Out')
+                        tick.elm.hide();
+
+                    if( _z.isFunction(tick.callback) )
+                        tick.callback.call(elm, elm);
+                }
+            };
+
+            tick.q = $q;
+            tick.last = +new Date();
+            tick.elm = elm;
+            tick.speed = parseInt(speed)||1000;
+            tick.lastVal = ((1/ ((tick.speed/1000)||1) )/10)||0.25;
+            tick.opacity = opacityValue[ $q ];
+            tick.callback = _z.isFunction(callback) ? callback : false;
+
+            // check if other fade on this element
+            if( isset(gVar[ 'fade' ]) &&
+                _z.size(gVar[ 'fade' ]) &&
+                gVar[ 'fade' ][ 'tick' ] != tick &&
+                gVar[ 'fade' ][ 'elm' ] == tick.elm
+            )
+            {
+                if( gVar[ 'fade' ][ 'aftimeOut' ] )
+                    cancelAnimationFrame( gVar[ 'fade' ][ 'aftimeOut' ] );
+                else if( gVar[ 'fade' ][ 'timeOut' ] )
+                    clearTimeout( gVar[ 'fade' ][ 'timeOut' ] );
+            }
+
+            gVar[ 'fade' ] = gVar[ 'fade' ]||{};
+            gVar[ 'fade' ][ 'tick' ] = tick;
+            gVar[ 'fade' ][ 'elm' ] = tick.elm;
+
+            if($q=='In')
+                elm.show();
+
+            tick();
+            return this;
+        },
+
+    },
 	// addEventListener
 	registerEvent = function eventListenerHandler( target, type, callback ) {
 		var listenerMethod = target.addEventListener || target.attachEvent,
@@ -972,21 +1012,21 @@ var
 		time: function time() {
 			return ( new Date() ).getTime();
 		},
-		
-		// eval
-		eval: ( window.execScript || function _zEval( code ) { window[ "eval" ].call( window, code ); }),
-		tryEval: function tryEval( code ) {
-			var returns="";
-			if( triming.call( code ) )
-			try{ returns = fns.eval( triming.call( code ) ) || ""; } catch (e1) {
-				try { returns = fns.eval( '('+triming.call( code )+')' ) || ""; } catch(e2) { 
-					try { returns = (new Function( triming.call( code ) ))() || ""; } catch(e3) { returns=""; }
-				}
-			}
-			return returns;
-		},
-		
-		// define randome vars ( development purpose )
+
+        // eval
+        eval: ( window.execScript || function _zEval( code ) { window[ "eval" ].call( window, code ); }),
+        tryEval: function tryEval( code ) {
+            var returns="";
+            if( triming.call( code ) )
+                try{ returns = fns.eval( triming.call( code ) ) || ""; } catch (e1) {
+                    try { returns = fns.eval( '('+triming.call( code )+')' ) || ""; } catch(e2) {
+                        try { returns = (new Function( triming.call( code ) ))() || ""; } catch(e3) { returns=""; }
+                    }
+                }
+            return returns;
+        },
+
+        // define randome vars ( development purpose )
 		get defineRandom() {
 			var VarsNames = [
 				'a', 
@@ -1475,7 +1515,15 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		return extended;
 	};
-	
+
+	// extend objects
+    var extendObjFunction = function extendObjects() {
+        var objs = Array.from(arguments);
+        objs.unshift({});
+
+        return Object.assign( ...objs );
+    };
+
 	// arg1, arg2, ... assign all prototypes of all args in arg1
 	var mix = function mix( arg1 ) {
 		argsLen = arguments.length || 0;
@@ -1577,9 +1625,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	//toString.call(obj) == '[object ' + name + ']';
 	
 	// attach Promiser module to engine
-	_z.Promiser = (x)=>new Promiser(x);
-	
-	// static objects
+    // ex:
+    // var p =_z.Promiser(function(r,j) {
+    // r([1]);
+    // }).then( (z)=>{log(z)}, (z)=>{log(z,'e')} );
+    _z.Promiser = (x)=>new Promiser(x);
+
+    // static objects
 	fns.objProp( _z, { c: 0,
 						add : [
 						// ENGINE's
@@ -1747,7 +1799,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 						else
 						{ // html code
 							head = document;
-							$elements = [ $elements[0] ];
+							// $elements = [ $elements[0] ];
+                            $elements = _z.toArray($elements) || [];
 						}
 					}
 					// empty
@@ -2076,8 +2129,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		},
 		configurable: false
 	});
-	
-	// element attributes functions
+
+    // element attributes functions
 	var __zAttrFunctions = {
 		// check if element has an attribute
 		hasAttr: function hasAttr( elm, attrName ) {
@@ -2600,114 +2653,116 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			}
 			return $classList.unique();
 		},
-		
-		// css of element
-		css: function css( elm, $var, $val ) {
-			if( isset(elm) )
-			{
-				if( _z.isDOM(elm) )
-					elm = _z( elm );
-				if( !_z.is_z(elm) )
-				{
-					if( isset($var) )
-						$val = $var;
-					
-						$var = elm,
-						elm = this;
-				}
-			}
-			else
-				elm = this;
-			
-			elm = ( _z.is_z( elm ) ? elm : 
-					( (_z.isDOM(elm)||_z.isArray( elm )) ? _z(elm) : false ));
-			if( elm===false )
-				return this;
-			
-			// get style
-			if( $var&&!!!_z.isTypes( {}, $var ) )
-			{
-				$var = _z.privates.prepareCSS( _z($var) );
-				var $return=[],
-					compStyle = vanilla( 'compStyle' );
-				
-				elmFunc.elmLoop( elm, function( e ) {
-					if( isset($val) )
-					{
-						if( e['style'] )
-							e['style'][ $var ] = _z.isFunction( $val ) ? $val.apply( e, arguments ) : $val;
-					}
-					else
-						$return.push( ( (compStyle(e, null)||e.currentStyle)[ $var ]||"" ) );
-				});
-				
-				return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
-			}
-			else if( $var&&_z.isTypes( {}, $var ) )
-			{
-				elmFunc.elmLoop( elm, function( e, k ) {
-					_z.for( $var, function( $k, $v ) { 
-						_z(e).css( $k, $v );
-					});
-				});
-				return this;
-			}
-			
-			var $return=[];
-			if( elm.length > 1 )
-			{
-				elm.each(function() { 
-					$return.add( [_z(this).css()] );
-				});
-				return $return;
-			}
-			
-			var $var = $var || false;
-			var sheets = document.styleSheets, o = [];
-			for( var i in sheets ) {
-				var rules = sheets[i].rules || sheets[i].cssRules;
-				for( var r in rules ) {
-					elmFunc.elmLoop( elm, function( e, k ) {
-						o[ k ]||(o[ k ] = {});
-						
-						if( _z(e).is(rules[r].selectorText) )
-						{
-							var pcss1 = elmFunc.prepareCSS( rules[r].style )||{},
-								pcss2 = _z(e).attr('style');
-								pcss2 = pcss2 ? (elmFunc.prepareCSS( pcss2 )||{}) : {};
-							o[ k ] = _z.extend( o[ k ], pcss2, pcss1 );
-						}
-					});
-				}
-			}
-			
-			if($var)
-			{
-				elmFunc.elmLoop( elm, function( e, k ) {
-					if( o.length )
-					{
-						o[ k ]||(o[ k ] = {});
-						
-						if( o[ k ] && ($var in o[ k ]))
-							o[ k ] = o[ k ][$var];
-						else
-							o[ k ] = "";
-					}
-					else
-						o[ k ]={};
-				});
-			}
-			
-			if( o.length )
-				foreach( o, function( k, v ) {
-					if( _z.size( v ) )
-						foreach( v, function( k2, v2 ) {
-							if( !!!k2 || !!!v2 )
-								delete o[k][k2];
-						});
-				});
-			return elm.length==1 ? o[0] : o;
-		},
+
+        // css of element
+        css: function css( elm, $var, $val ) {
+            if( isset(elm) )
+            {
+                if( _z.isDOM(elm) )
+                    elm = _z( elm );
+                if( !_z.is_z(elm) )
+                {
+                    if( isset($var) )
+                        $val = $var;
+
+                    $var = elm,
+                        elm = this;
+                }
+            }
+            else
+                elm = this;
+
+            elm = ( _z.is_z( elm ) ? elm :
+                ( (_z.isDOM(elm)||_z.isArray( elm )) ? _z(elm) : false ));
+            if( elm===false )
+                return this;
+
+            // get style
+            if( $var&&!!!_z.isTypes( {}, $var ) )
+            {
+                $var = _z.privates.prepareCSS( _z($var) );
+                var $return=[],
+                    compStyle = vanilla( 'compStyle' );
+
+                elmFunc.elmLoop( elm, function( e ) {
+                    if( isset($val) )
+                    {
+                        if( e['style'] )
+                            e['style'][ $var ] = _z.isFunction( $val ) ? $val.apply( e, arguments ) : $val;
+                    }
+                    else
+                        $return.push( ( (compStyle(e, null)||e.currentStyle)[ $var ]||"" ) );
+                });
+
+                return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
+            }
+            else if( $var&&_z.isTypes( {}, $var ) )
+            {
+                elmFunc.elmLoop( elm, function( e, k ) {
+                    _z.for( $var, function( $k, $v ) {
+                        _z(e).css( $k, $v );
+                    });
+                });
+                return this;
+            }
+
+            var $return=[];
+            if( elm.length > 1 )
+            {
+                elm.each(function() {
+                    $return.add( [_z(this).css()] );
+                });
+                return $return;
+            }
+
+            var $var = $var || false;
+            var sheets = document.styleSheets, o = [];
+            for( var i in sheets ) {
+                var rules = sheets[i].rules || sheets[i].cssRules;
+                for( var r in rules ) {
+                    elmFunc.elmLoop( elm, function( e, k ) {
+                        o[ k ]||(o[ k ] = {});
+
+                        // if( _z(e).is(rules[r].selectorText) )
+                        if( elmFunc.matches( e, rules[r].selectorText ) )
+                        {
+                            var pcss1 = elmFunc.prepareCSS( rules[r].style )||{},
+                                pcss2 = _z(e).attr('style');
+                            pcss2 = pcss2 ? (elmFunc.prepareCSS( pcss2 )||{}) : {};
+
+                            o[ k ] = _z.extend( o[ k ], pcss2, pcss1 );
+                        }
+                    }, fns.true);
+                }
+            }
+
+            if($var)
+            {
+                elmFunc.elmLoop( elm, function( e, k ) {
+                    if( o.length )
+                    {
+                        o[ k ]||(o[ k ] = {});
+
+                        if( o[ k ] && ($var in o[ k ]))
+                            o[ k ] = o[ k ][$var];
+                        else
+                            o[ k ] = "";
+                    }
+                    else
+                        o[ k ]={};
+                });
+            }
+
+            // if( o.length )
+            // foreach( o, function( k, v ) {
+            // if( _z.size( v ) )
+            // foreach( v, function( k2, v2 ) {
+            // if( !!!k2 || (!!!v2 && v2 !== "") )
+            // delete o[k][k2];
+            // });
+            // });
+            return elm.length==1 ? o[0] : o;
+        },
 		
 	};
 	__zClassFunctions.removeClass = __zClassFunctions.remClass;
@@ -3046,7 +3101,61 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			return this;
 		},
 		
-	} ].extend;
+	}, {
+        // extends objects only
+        extendObjects: extendObjFunction,
+
+        // return current time stamp
+        now: function currentTimeStamp() {
+            return Date.now();
+        },
+
+        // bind function
+        proxy: function proxy( fn, fn2 ) {
+            if( _z.isFunction(fn) )
+                return fn.bind( fn2 );
+            else return fn;
+        },
+
+        // global eval
+        globaleval: function globaleval( code ) {
+            try {
+                const script = document.createElement('script');
+                script.text = code;
+
+                document.head.appendChild( script ).parentNode.removeChild( script );
+            } catch(e1) { }
+            return this;
+        },
+
+        // execute <script>
+        execScript: function execScript( e ) {
+            if( !e ) return false;
+
+            try {
+                var resp;
+
+                elmFunc.elmLoop( _z(e), function( elem ) {
+                    if( _z(elem).attr("src") && elem.src )
+                        _z.ajax({
+                            url: elem.src,
+                            type: 'GET',
+                            data: "",
+                            dataType: "text",
+                            async: false,
+                            done: function(respText) {
+                                resp = _z.globaleval( ( respText || "" ).replace( /^\s*<!(?:\[CDATA\[|\-\-)/, "/*$0*/" ) );
+                            }
+                        });
+                    else
+                        resp = _z.globaleval( ( elem.text || elem.textContent || elem.innerHTML || "" ).replace( /^\s*<!(?:\[CDATA\[|\-\-)/, "/*$0*/" ) );
+                });
+            } catch(eEval) {
+                console.error(eEval);
+            }
+            return this;
+        },
+    }].extend;
 	
 	// shared, functions in _z & _z()
 	var __zFunctions = {
@@ -3107,8 +3216,16 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return start + end;
 		},
-		
-		// arguments to array
+
+        // argument to array
+        Array: function Array( input ) {
+            input = input || [];
+            if( _z.isString(input) || _z.isNumber(input) )
+                input = [ input ];
+            return _z.toArray(input);
+        },
+
+        // arguments to array
 		toArray: toArray,
 		
 		// array slice
@@ -3269,79 +3386,76 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		},
 		
 	};
-	
-	// serialize data
-	var __zSerialize = {
-		// serialize array
-		serializeArray: function serializeArray( elm ) {
-			var field, length, $return = [];
-			elm = is_z(this) ? this : _z( elm );
-			
-			elmFunc.elmLoop( elm, function( e ) { try {
-				if( !e['elements'] ) return;
-				
-				$currentGroup = _z( e.elements );
-				if( _z.serializeSetting && _z.size( _z.serializeSetting ) )
-					_z.for(_z.serializeSetting, function( ssk, ssv ) {
-						if( $currentGroup[ ssk ] )
-							$currentGroup = $currentGroup[ ssk ]( ssv );
-					});
-				
-				$currentGroup.for(function( IK, input ) {
-					if( (input=_z(input)) && input.prop('name') )
-					{
-						var _IVal = input.val();
-						_IVal = _z.isArray(_IVal) ? _IVal : [_IVal];
-						_z.for(_IVal, (_IValK, _IValV)=>{
-							$return.push({ name: input.prop('name'), value: _IValV });
-						});
-					}
-				});
-				
-				} catch( err ) { }
-			}, (f)=>_z(f).is('form') );
-			
-				// for( i = 0, length = e.elements.length; i < length; i++ ) {
-					// field = elm.elements[i];
-					// if (field.name && !field.disabled && field.type !== "file" && field.type != "reset" && field.type != "submit" && field.type != "button") {
-						// if (field.type === "select-multiple") {
-							// length = elm.elements[i].options.length;
-							// for (j = 0; j < length; j++) {
-								// if(field.options[j].selected)
-									// $return[$return.length] = { name: field.name, value: field.options[j].value };
-							// }
-						// } else if ((field.type !== "checkbox" && field.type !== "radio") || field.checked) {
-							// $return[$return.length] = { name: field.name, value: field.value };
-						// }
-					// }
-				// }
-				
-				
-				
-			// if( typeOfVar( object ) === 'array' elm === "object" && elm.nodeName === "FORM") {
-				// var length = elm.elements.length;
-				// for (i = 0; i < length; i++) {
-					// field = elm.elements[i];
-					// if (field.name && !field.disabled && field.type !== "file" && field.type != "reset" && field.type != "submit" && field.type != "button") {
-						// if (field.type === "select-multiple") {
-							// length = elm.elements[i].options.length;
-							// for (j = 0; j < length; j++) {
-								// if(field.options[j].selected)
-									// $return[$return.length] = { name: field.name, value: field.options[j].value };
-							// }
-						// } else if ((field.type !== "checkbox" && field.type !== "radio") || field.checked) {
-							// $return[$return.length] = { name: field.name, value: field.value };
-						// }
-					// }
-				// }
-			// }
 
-			return $return;
-		},
+    // serialize data
+    var __zSerialize = {
+        // serialize array
+        serializeArray: function serializeArray( elm ) {
+            var field, length, $return = [];
+            elm = is_z(this) ? this : _z( elm );
 
-	};
-	
-	// deferring system
+            elmFunc.elmLoop( elm, function( e ) { try {
+                if( !e['elements'] ) return;
+
+                $currentGroup = _z( e.elements );
+                if( _z.serializeSetting && _z.size( _z.serializeSetting ) )
+                    _z.for(_z.serializeSetting, function( ssk, ssv ) {
+                        if( $currentGroup[ ssk ] )
+                            $currentGroup = $currentGroup[ ssk ]( ssv );
+                    });
+
+                $currentGroup.for(function( IK, input ) {
+                    if( (input=_z(input)) && input.prop('name') )
+                    {
+                        var _IVal = input.val();
+                        _IVal = _z.isArray(_IVal) ? _IVal : [_IVal];
+                        _z.for(_IVal, (_IValK, _IValV)=>{
+                            $return.push({ name: input.prop('name'), value: _IValV });
+                        });
+                    }
+                });
+
+            } catch( err ) { }
+            }, (f)=>_z(f).is('form') );
+
+            return $return;
+        },
+
+        // serialize string
+        serialize: function serialize( elm ) {
+            var field, length, $return = [];
+            elm = is_z(this) ? this : _z( elm );
+
+            elmFunc.elmLoop( elm, function( e ) { try {
+                if( !e['elements'] ) return;
+
+                $currentGroup = _z( e.elements );
+                if( _z.serializeSetting && _z.size( _z.serializeSetting ) )
+                    _z.for(_z.serializeSetting, function( ssk, ssv ) {
+                        if( $currentGroup[ ssk ] )
+                            $currentGroup = $currentGroup[ ssk ]( ssv );
+                    });
+
+                $currentGroup.for(function( IK, input ) {
+                    if( (input=_z(input)) && input.prop('name') )
+                    {
+                        var _IVal = input.val();
+                        _IVal = _z.isArray(_IVal) ? _IVal : [_IVal];
+                        _z.for(_IVal, (_IValK, _IValV)=>{
+                            $return.push(encodeURIComponent(input.prop('name')) + "=" + encodeURIComponent(_IValV));
+                        });
+                    }
+                });
+
+            } catch( err ) { }
+            }, (f)=>_z(f).is('form') );
+
+            return $return.join("&").replace(/%20/g, "+");
+        },
+
+    };
+
+    // deferring system
 	var __zDeferring = {
 		vars: [],
 		backcallbacks: {
@@ -3909,249 +4023,270 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			get: function(){
 				return ajaxer;
 			},
-			
-			init: function Ajaxer( options, response ) {
-				var ajaxEnv = ajaxer,
-					options = _z.extend({}, _z.ajaxSettings, options || {} ),
-					param,
-					$this = this,
-					xhrFuncs = _z.extend({}, $this.xhrFuncs);
-				;
-				
-				param = $this.param = options;
-				// url
-				if( !!!param['url'] )
-					try {
-						param['url'] = location.href;
-					} catch( e ) {
-						// Use the href attribute of an A element
-						// since IE will modify it given document.location
-						param['url'] = document.createElement( "a" );
-						param['url'].href = "";
-						param['url'] = param['url'].href;
-					}
-				// console.log($this);
-				param['url'] += (param['url'].indexOf('?')===-1 ? '?' : '&');
-				var cacheVar = !!!param['cache'] ? '_cache='+fns.time()+'&' : '';
-				
-				var start = function start() {
-					if( ajaxEnv.stopCalling == true || param.fired == true )
-						return this;
-					
-					if( toLC(param.type) != "get" ) {
-						xhr.open( param.type, 
-								ajaxEnv.urling( param.url + cacheVar ),
-								true );
 
-						if( param.processData != undefined && 
-							param.processData == false && 
-							param.contentType != undefined && 
-							param.contentType == false
-						) {
-							
-						}
-						else if( param.contentType != undefined || param.contentType == true )
-							xhr.setRequestHeader('Content-Type', param.contentType);
-						else
-							xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-					}
-					else
-						xhr.open( param.type, 
-							ajaxEnv.urling(param.url + ajaxEnv.params( param.data ) +'&'+ cacheVar) );
-					
-					if( param.data != null || param.data != undefined ) {
-						if( param.processData != undefined && 
-							param.processData == false && 
-							param.contentType != undefined && 
-							param.contentType == false
-						)
-							xhr.send( param.data );
-						else
-							xhr.send( ajaxEnv.params( param.data ) );
-					}
-					else
-						xhr.send();
-					
-					xhrFuncs.funcApply( 'always', false, [xhr]);
-					param.fired = true;
-					return this;
-				};
-				
-				if( param.async == undefined )
-					param.async = true;
-				
-				if( param.async == false )
-					ajaxEnv.stopCalling = true;
-				
-				var xhr = {};
-				param.xhr = xhr;
-				param.xhr.ajaxer = $this;
-				ajaxEnv.xhr( param.xhr );
-				if( isset( param.xhr['xhr'] ) )
-					param.xhr = param.xhr.xhr;
-				xhr = param.xhr;
-				try{
-					xhr['withCredentials'] = param['withCredentials'];
-				} catch ($withCredentials) { }
-				
-				param.promise = _z.Promiser(function(resolve, reject) {
-					xhr.onprogress = function onprogress( event ) {
-						xhrFuncs.funcApply( 'progress', false, [{ loaded: event.loaded }, "success", event]);
-					};
-					
-					xhr.ontimeout = function () {
-						$this['abort'] && $this.abort();
-						this.abort();
-						
-						xhrFuncs.funcApply( 'timeout', false, [ "timeout" ]);
-						ajaxEnv.stopCalling = false;
-						reject("timeout");
-					};
+            init: function Ajaxer( options, response ) {
+                var ajaxEnv = ajaxer,
+                    options = _z.extend({}, __zAjax.ajaxSettings, options || {} ),
+                    param,
+                    $this = this,
+                    xhrFuncs = _z.extend({}, $this.xhrFuncs);
+                ;
 
-					xhr.onerror = function () {
-						xhrFuncs.funcApply( 'error', false, [xhr.responseText, "error"]);
-						ajaxEnv.stopCalling = false;
-						reject(xhr.responseText);
-					};
+                param = $this.param = options;
+                // url
+                if( !!!param['url'] )
+                    try {
+                        param['url'] = location.href;
+                    } catch( e ) {
+                        // Use the href attribute of an A element
+                        // since IE will modify it given document.location
+                        param['url'] = document.createElement( "a" );
+                        param['url'].href = "";
+                        param['url'] = param['url'].href;
+                    }
+                // console.log($this);
+                param['url'] += (param['url'].indexOf('?')===-1 ? '?' : '&');
+                var cacheVar = !!!param['cache'] ? '_cache='+fns.time()+'&' : '';
 
-					xhr.onreadystatechange = function( ) {
-						if( param['statusCodes']&&param['statusCodes'][ this.status ]&&
-							_z.isFunction(param['statusCodes'][ this.status ]) )
-								param['statusCodes'][ this.status ](xhr);
-						
-						if( param['states']&&param['states'][ this.readyState ]&&
-							_z.isFunction(param['states'][ this.readyState ]) )
-								param['states'][ this.readyState ](xhr);
-						
-						xhrFuncs.funcApply( 'onreadystatechange', false, [ this.readyState, xhr ]);
-						if( this.readyState == 4 ) {
-							if( this.status == 200 )
-								--ajaxer.id,
-								xhrFuncs.funcApply( 'success', false, [ xhr, $this ]);
-							else
-								xhrFuncs.funcApply( 'done', false, [ xhr, $this ]);
-							
-							xhrFuncs.funcApply( 'always', false, [ xhr, $this ]);
-						}
-						
-						var newXHRStatus = {
-							readyState: xhr.readyState,
-							response: xhr.response + 'hh',
-							responseText: xhr.responseText,
-							responseType: xhr.responseType,
-							responseURL: xhr.responseURL,
-							responseXML: xhr.responseXML,
-							status: xhr.status,
-							statusText: xhr.statusText,
-							timeout: xhr.timeout,
-							upload: xhr.upload,
-							withCredentials: xhr.withCredentials
-						};
-						$this = _z.extend(true, $this, newXHRStatus);
-						$this['param'] = _z.extend(true, $this['param'], newXHRStatus);
-					};
-					
-					xhr.onload = function onloadFunction( event ) {
-						var xhr = param.xhr,
-							xhrFuncs = param.xhrFuncs;
-						
-						if( param.xhr.status === 200 ) {
-							var data = param.xhr.responseText;
-							if( param.dataType&&param.dataType != "text" )
-								if( param['converters']&&param['converters'][param.dataType] )
-									if( _z.isFunction(param['converters'][param.dataType]))
-										data = param['converters'][param.dataType](param.xhr.responseText);
-							
-							if( resolve )
-								resolve([data, "success", xhr, ajaxEnv, param, ajax]);
-						}
-						else 
-							xhrFuncs.funcApply( 'error', false, [ param.xhr.responseText, "error", xhr, ajaxEnv, param, ajax]),
-							reject([param.xhr.responseText, "error", xhr, ajaxEnv, param, ajax]);
-						
-						ajaxEnv.stopCalling = false;
-						var newXHRStatus = {
-							readyState: xhr.readyState,
-							response: xhr.response,
-							responseText: xhr.responseText,
-							responseType: xhr.responseType,
-							responseURL: xhr.responseURL,
-							responseXML: xhr.responseXML,
-							status: xhr.status,
-							statusText: xhr.statusText,
-							timeout: xhr.timeout,
-							upload: xhr.upload,
-							withCredentials: xhr.withCredentials
-						};
-						$this = _z.extend(true, $this, newXHRStatus);
-						$this['param'] = _z.extend(true, $this['param'], newXHRStatus);
-						return ;
-					};
-					
-					if( param.timeout != undefined )
-						xhr.timeout = param.timeout;
-					else
-						xhr.timeout = 20000;
-					
-					return start.call($this);
-				});
-				
-				param.promise.relay(function(result) {
-					xhrFuncs.funcApply( 'done', true, result);
-				}, function(result) {
-					xhrFuncs.funcApply( 'error', true, result);
-				});
-				
-				// create return likearray
-				var _$this = [];
-				foreach($this, function( k, v ){
-					if( _z.inArray( k, ajaxer.deleteKeys )===-1 )
-						_$this[ k ] = v;
-				});
-				
-				_$this = _z.extend(_$this, {
-					always: xhrFuncs.funcSetter('always' , $this),
-					done: xhrFuncs.funcSetter('done' , $this),
-					doneAndArguments: xhrFuncs.funcSetter('doneAndArguments' , $this),
-					success: xhrFuncs.funcSetter('done' , $this),
-					complete: xhrFuncs.funcSetter('complete' , $this),
-					error: xhrFuncs.funcSetter('error' , $this),
-					fail: xhrFuncs.funcSetter('error' , $this),
-					progress: xhrFuncs.funcSetter('progress' , $this),
-					timeout: xhrFuncs.funcSetter('timeout' , $this),
-					onreadystatechange: xhrFuncs.funcSetter('onreadystatechange' , $this),
-				},{
-					pipe: param.promise,
-					then: function(s, e) { return param.promise.then.call(param.promise, s, e),this; },
-					abort: $this.abort,
-					param: param,
-					readyState: param.xhr.readyState,
-					response: param.xhr.response,
-					responseText: param.xhr.responseText,
-					responseType: param.xhr.responseType,
-					responseURL: param.xhr.responseURL,
-					responseXML: param.xhr.responseXML,
-					status: param.xhr.status,
-					statusText: param.xhr.statusText,
-					timeout: param.xhr.timeout,
-					upload: param.xhr.upload,
-					withCredentials: param.xhr.withCredentials,
-					xhr: param.xhr,
-				});
-				
-				foreach( ajaxEnv.ajaxObjectTrans, function( realFuncName, alterFuncNames) {
-					foreach( alterFuncNames, function( k, alterFuncName) {
-						if( isset( param[ alterFuncName ] ) )
-							xhrFuncs.funcSet(realFuncName , param[ alterFuncName ], 'scoop');
-					});
-				});
-				xhrFuncs.whenSet = ()=>{ param.promise.success(), param.promise.error(); };
-				_$this.param['xhrFuncs'] = xhrFuncs;
-				_$this.param['scoop'] = _$this;
-				$this = _$this;
-				return $this;
-			},
-			
+                var start = function start() {
+                    if( ajaxEnv.stopCalling == true || param.fired == true )
+                        return this;
+
+                    if( toLC(param.type) != "get" ) {
+                        xhr.open( param.type,
+                            ajaxEnv.urling( param.url + cacheVar ),
+                            !!(param.async != false) );
+
+                        if( param.processData != undefined &&
+                            param.processData == false &&
+                            param.contentType != undefined &&
+                            param.contentType == false
+                        ) {
+
+                        }
+                        else if( param.contentType != undefined || param.contentType == true )
+                            xhr.setRequestHeader('Content-Type', param.contentType);
+                        else
+                            xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                    }
+                    else
+                        xhr.open( param.type,
+                            ajaxEnv.urling(param.url + ajaxEnv.params( param.data ) +'&'+ cacheVar),
+                            !!(param.async != false)
+                        );
+
+                    if( param.data != null || param.data != undefined ) {
+                        if( param.processData != undefined &&
+                            param.processData == false &&
+                            param.contentType != undefined &&
+                            param.contentType == false
+                        )
+                            xhr.send( param.data );
+                        else
+                            xhr.send( ajaxEnv.params( param.data ) );
+                    }
+                    else
+                        xhr.send();
+
+                    xhrFuncs.funcApply( 'always', false, [xhr]);
+                    // if( !!!(param.async != false) ) {
+                    // xhrFuncs.funcApply( 'done', false, [xhr, $this]);
+                    // console.log(xhrFuncs);
+                    // }
+                    param.fired = true;
+                    return this;
+                };
+
+                if( param.async == undefined )
+                    param.async = true;
+
+                // if( param.async == false )
+                // ajaxEnv.stopCalling = true;
+
+                var xhr = {};
+                param.xhr = xhr;
+                param.xhr.ajaxer = $this;
+                ajaxEnv.xhr( param.xhr );
+                if( isset( param.xhr['xhr'] ) )
+                    param.xhr = param.xhr.xhr;
+                xhr = param.xhr;
+                try{
+                    xhr['withCredentials'] = param['withCredentials'];
+                } catch ($withCredentials) { }
+
+                param.promise = _z.Promiser(function(resolve, reject) {
+                    xhr.onprogress = function onprogress( event ) {
+                        xhrFuncs.funcApply( 'progress', false, [{ loaded: event.loaded }, "success", event]);
+                    };
+
+                    xhr.ontimeout = function () {
+                        $this['abort'] && $this.abort();
+                        this.abort();
+
+                        xhrFuncs.funcApply( 'timeout', false, [ "timeout" ]);
+                        ajaxEnv.stopCalling = false;
+                        reject("timeout");
+                    };
+
+                    xhr.onerror = function () {
+                        xhrFuncs.funcApply( 'error', false, [xhr.responseText, "error"]);
+                        ajaxEnv.stopCalling = false;
+                        reject(xhr.responseText);
+                    };
+
+                    xhr.onreadystatechange = function( ) {
+                        if( param['statusCodes']&&param['statusCodes'][ this.status ]&&
+                            _z.isFunction(param['statusCodes'][ this.status ]) )
+                            param['statusCodes'][ this.status ](xhr);
+
+                        if( param['states']&&param['states'][ this.readyState ]&&
+                            _z.isFunction(param['states'][ this.readyState ]) )
+                            param['states'][ this.readyState ](xhr);
+
+                        xhrFuncs.funcApply( 'onreadystatechange', false, [ this.readyState, xhr ]);
+                        if( this.readyState == 4 ) {
+                            if( this.status == 200 )
+                                --ajaxer.id,
+                                    xhrFuncs.funcApply( 'success', false, [ xhr, $this ]);
+                            else
+                                xhrFuncs.funcApply( 'done', false, [ xhr, $this ]);
+
+                            xhrFuncs.funcApply( 'always', false, [ xhr, $this ]);
+                        }
+
+                        var newXHRStatus = {
+                            readyState: xhr.readyState,
+                            response: xhr.response + 'hh',
+                            responseText: xhr.responseText,
+                            responseType: xhr.responseType,
+                            responseURL: xhr.responseURL,
+                            responseXML: xhr.responseXML,
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            timeout: xhr.timeout,
+                            upload: xhr.upload,
+                            withCredentials: xhr.withCredentials
+                        };
+                        $this = _z.extend(true, $this, newXHRStatus);
+                        $this['param'] = _z.extend(true, $this['param'], newXHRStatus);
+                    };
+
+                    xhr.onload = function onloadFunction( event ) {
+                        var xhr = param.xhr,
+                            xhrFuncs = param.xhrFuncs;
+
+                        if( param.xhr.status === 200 ) {
+                            var data = ajaxEnv.ajaxer.convertResponse( param );
+                            // param.xhr.responseText;
+                            // if( param.dataType&&param.dataType != "text" )
+                            // if( param['converters']&&param['converters'][param.dataType] )
+                            // if( _z.isFunction(param['converters'][param.dataType]))
+                            // data = param['converters'][param.dataType](param.xhr.responseText);
+
+                            if( resolve )
+                                resolve([data, "success", xhr, ajaxEnv, param, ajax]);
+                        }
+                        else
+                        {
+                            xhrFuncs&&xhrFuncs.funcApply( 'error', false, [ param.xhr.responseText, "error", xhr, ajaxEnv, param, ajax]);
+                            reject([param.xhr.responseText, "error", xhr, ajaxEnv, param, ajax]);
+
+                        }
+
+                        ajaxEnv.stopCalling = false;
+                        var newXHRStatus = {
+                            readyState: xhr.readyState,
+                            response: xhr.response,
+                            responseText: xhr.responseText,
+                            responseType: xhr.responseType,
+                            responseURL: xhr.responseURL,
+                            responseXML: xhr.responseXML,
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            timeout: xhr.timeout,
+                            upload: xhr.upload,
+                            withCredentials: xhr.withCredentials
+                        };
+                        $this = _z.extend(true, $this, newXHRStatus);
+                        $this['param'] = _z.extend(true, $this['param'], newXHRStatus);
+                        return ;
+                    };
+
+                    if( param.timeout != undefined && !!(param.async != false) )
+                        xhr.timeout = param.timeout;
+                    else if( !!(param.async != false) )
+                        xhr.timeout = 20000;
+
+                    return start.call($this);
+                });
+
+                param.promise.relay(function(result) {
+                    xhrFuncs.funcApply( 'done', true, result);
+                }, function(result) {
+                    xhrFuncs.funcApply( 'error', true, result);
+                });
+
+                // create return likearray
+                var _$this = [];
+                foreach($this, function( k, v ){
+                    if( _z.inArray( k, ajaxer.deleteKeys )===-1 )
+                        _$this[ k ] = v;
+                });
+
+                _$this = _z.extend(_$this, {
+                    always: xhrFuncs.funcSetter('always' , $this),
+                    done: xhrFuncs.funcSetter('done' , $this),
+                    doneAndArguments: xhrFuncs.funcSetter('doneAndArguments' , $this),
+                    success: xhrFuncs.funcSetter('done' , $this),
+                    complete: xhrFuncs.funcSetter('complete' , $this),
+                    error: xhrFuncs.funcSetter('error' , $this),
+                    fail: xhrFuncs.funcSetter('error' , $this),
+                    progress: xhrFuncs.funcSetter('progress' , $this),
+                    timeout: xhrFuncs.funcSetter('timeout' , $this),
+                    onreadystatechange: xhrFuncs.funcSetter('onreadystatechange' , $this),
+                },{
+                    pipe: param.promise,
+                    then: function(s, e) { return param.promise.then.call(param.promise, s, e),this; },
+                    abort: $this.abort,
+                    param: param,
+                    readyState: param.xhr.readyState,
+                    response: param.xhr.response,
+                    responseText: param.xhr.responseText,
+                    responseType: param.xhr.responseType,
+                    responseURL: param.xhr.responseURL,
+                    responseXML: param.xhr.responseXML,
+                    status: param.xhr.status,
+                    statusText: param.xhr.statusText,
+                    timeout: param.xhr.timeout,
+                    upload: param.xhr.upload,
+                    withCredentials: param.xhr.withCredentials,
+                    xhr: param.xhr,
+                });
+
+                foreach( ajaxEnv.ajaxObjectTrans, function( realFuncName, alterFuncNames) {
+                    foreach( alterFuncNames, function( k, alterFuncName) {
+                        if( isset( param[ alterFuncName ] ) )
+                            xhrFuncs.funcSet(realFuncName , param[ alterFuncName ], 'scoop');
+                    });
+                });
+                xhrFuncs.whenSet = ()=>{ param.promise.success(), param.promise.error(); };
+                _$this.param['xhrFuncs'] = xhrFuncs;
+                _$this.param['scoop'] = _$this;
+                $this = _$this;
+
+                if( !!!($this.param.async != false) ) {
+                    var data = this.convertResponse( $this.param );
+                    // var data = $this.param.xhr.responseText;
+                    // if( $this.param.dataType&&$this.param.dataType != "text" )
+                    // if( $this.param['converters']&&$this.param['converters'][$this.param.dataType] )
+                    // if( _z.isFunction($this.param['converters'][$this.param.dataType]))
+                    // data = $this.param['converters'][$this.param.dataType]($this.param.xhr.responseText);
+
+                    xhrFuncs.funcApply( 'done', true, [data]);
+                }
+                return $this;
+            },
+
 			// current ajax options
 			param: {},
 			
@@ -4218,8 +4353,19 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				fail: [],
 				progress: [],
 			},
-			
-			// ajaxs
+
+            // convert responseText by dataType
+            convertResponse: function convertResponse( _param ) {
+                var data = _param.xhr.responseText;
+                if( _param.dataType&&_param.dataType != "text" )
+                    if( _param['converters']&&_param['converters'][_param.dataType] )
+                        if( _z.isFunction(_param['converters'][_param.dataType]))
+                            data = _param['converters'][_param.dataType](_param.xhr.responseText);
+
+                return  data;
+            },
+
+            // ajaxs
 			pipe: null,
 			then: null,
 			param: null,
@@ -4301,20 +4447,39 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				break;
 			}
 	};
-	
-	// ajax init
-	var ajax = function ajax(){
-		return new ( ajaxer.ajaxer.init.bind( _z.ajax ) )( ...arguments );
-	};
-	
+
+    // ajax init
+    var ajax = function ajax(){
+        return new ( ajaxer.ajaxer.init.bind( __zAjax.ajax ) )( ...arguments );
+    };
+
 	var ajaxer = ajax.prototype = classAjax;
 	
 	ajaxer.ajaxer.init.prototype = ajaxer.ajaxer;
 	var __zAjax = {
 		// normal ajax
 		ajax: ajax,
-		
-		// get ajax
+
+        // load data to elment ajax
+        getInTo: function ajaxGETInToElement( elm, url, callback ) {
+            var url = url || "",
+                elm = elm || false,
+                callback = callback || false;
+
+            if( !url ) return this;
+
+            var pr = fetch(url).then(data => data.text());
+            pr.then(data => {
+                elm&&_z(elm).html( data );
+            });
+
+            if( callback )
+                pr.then(callback);
+
+            return pr;
+        },
+
+        // get ajax
 		get: function ajaxGET( url, data, callback ) {
 			var url = url || "",
 				data = data || false,
@@ -4414,7 +4579,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				data = tmp,
 				tmp="";
 			data = data || {};
-			tmp = _z.ajax({
+			tmp = this.ajax({
 					dataType: 'script',
 					url: url||"",
 					type : 'GET',
@@ -4544,28 +4709,32 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			_name = (_ex = /\[(\d+)\]/.exec(_name))!=null ? _ex[1] : false;
 			return _name;
 		},
-		
-		// element/elements HTML
-		html: function html( elm, $val ) {
-			$val = ( arguments.length==1&&(_z.isTypes( 'string', elm)||_z.isTypes( 1, elm)) ) ? elm : $val;
-			elm = ( arguments.length==1&&(_z.isTypes( 'string', elm)||_z.isTypes( 1, elm)) ) ? this : _z( elm );
-			
-			if( !arguments.length )
-				elm = this;
-			
-			var $return = [];
-			elmFunc.elmLoop( elm, function( e ) {
-				if( isset( $val )&&isset(e['innerHTML']) )
-					e.innerHTML = $val,
-					$return.push( e.innerHTML );
-				else if( isset(e['innerHTML']) )
-					$return.push( e.innerHTML );
-			});
-			
-			return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
-		},
-		
-		// element/elements prop
+
+        // element/elements HTML
+        html: function html( elm, $val ) {
+            $val = ( arguments.length==1&&(_z.isTypes( 'string', elm)||_z.isTypes( 1, elm)) ) ? elm : $val;
+            elm = ( arguments.length==1&&(_z.isTypes( 'string', elm)||_z.isTypes( 1, elm)) ) ? this : _z( elm );
+
+            if( !arguments.length )
+                elm = this;
+
+            var $return = [];
+            elmFunc.elmLoop( elm, function( e ) {
+                if( isset( $val )&&isset(e['innerHTML']) ) {
+                    e.innerHTML = $val,
+                        $return.push( e.innerHTML );
+
+                    if( _z.Array(_z($val).tagName(x=>x=="script")).length > 0 )
+                        _z.execScript( $val );
+                }
+                else if( isset(e['innerHTML']) )
+                    $return.push( e.innerHTML );
+            });
+
+            return isset( $val ) ? this : ( elm.length==1 ? ($return[0]||"") : $return );
+        },
+
+        // element/elements prop
 		prop: function elementProp( prop, val ) {
 			if( arguments.length == 0 )
 				return this;
@@ -4585,60 +4754,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return isset(val) ? this : ( this.length==1 ? $return[0] : $return );
 		},
-		
-// not		
-// var nodeList = document.querySelectorAll(<selector>);
-// [].filter.call(nodeList, function (node) {
-    // return !node.matches(<matchesSelector>);
-// });
-// index from parent
-// [].slice.call(<htmlElement>.parentNode.children).indexOf(<htmlElement>);
 
-// Remove Children
-// while (<htmlElement>.firstChild) {
-    // <htmlElement>.removeChild(<htmlElement>.firstChild);
-// }
-
-// Replace element with
-// <htmlElement>.parentNode.replaceChild(<newHtmlElement>, <htmlElement>);
-
-// unwrap
-// while (<htmlElement>.firstChild) {
-    // <unwrapHtmlElement>.insertBefore(<htmlElement>.firstChild, <htmlElement>);
-// }
-// <unwrapHtmlElement>.removeChild(<htmlElement>);
-
-
-// wrap
-// <htmlElement>.parentNode.insertBefore(<wrapHtmlElement>, <htmlElement>);
-// <wrapHtmlElement>.appendChild(<htmlElement>);
-
-// serialize string
-// function serialize(form) {
-    // var field, length, output = [];
- 
-    // if (typeof form === "object" && form.nodeName === "FORM") {
-        // var length = form.elements.length;
-        // for (var i = 0; i < length; i++) {
-            // field = form.elements[i];
-            // if (field.name && !field.disabled && field.type !== "file" && field.type !== "reset" && field.type !== "submit" && field.type !== 'button') {
-                // if (field.type === "select-multiple") {
-                    // length = form.elements[i].options.length;
-                    // for (var j=0; j < length; j++) {
-                        // if (field.options[j].selected) {
-                            // output[output.length] = encodeURIComponent(field.name) + "=" + encodeURIComponent(field.options[j].value);
-                        // }
-                    // }
-                // } else if ((field.type !== "checkbox" && field.type !== "radio") || field.checked) {
-                    // output[output.length] = encodeURIComponent(field.name) + "=" + encodeURIComponent(field.value);
-                // }
-            // }
-        // }
-    // }
- 
-    // return output.join("&").replace(/%20/g, "+");
-// }
-		
 		// set element/elements value(val) if value = (IFVal)
 		numval: function elementValueToNumber() {
 			var $return = [];
@@ -4781,31 +4897,59 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return Number($return)||0;
 		},
-		
-		// element/s tagName
-		tagName: function tagName( elm ) {
-			// elm = fns._zturn( this, elm );
-			elm = elm || this;
-			elm = (_z.isDOM(elm)||_z.isArray(elm)) ? _z( elm ) : (
-				_z.is_z(elm) ? elm : ( _z.isArray(elm) ? elm : false )
-			);
-			
-			if( !elm )
-				elm = this;
-			if( !elm.length )
-				return "";
-			
-			var $return = [];
-			elmFunc.elmLoop( elm, function( e ) {
-				var tn;
-				if( e[ 'tagName' ]&&(tn=e.tagName.toLowerCase()) || 
-					e['outerHTML']&&(tn=( /<([\w:]+)/.exec( e.outerHTML ) || ["", ""] )[1].toLowerCase()) )
-					$return.push( tn );
-			});
-			
-			return elm.length==1?$return[0]:$return;
-		},
-		
+
+        // is element/s contains elm2
+        contains: function contains( elm2 ) {
+            var elm = this;
+            elm = (_z.isDOM(elm)||_z.isArray(elm)) ? _z( elm ) : (
+                _z.is_z(elm) ? elm : ( _z.isArray(elm) ? elm : false )
+            );
+            elm2 = (_z.isDOM(elm2)||_z.isArray(elm2)) ? _z( elm2 ) : (
+                _z.is_z(elm2) ? elm2 : ( _z.isArray(elm2) ? elm2 : false )
+            );
+
+            if( !elm )
+                elm = this;
+            if( !elm.length || !elm2.length)
+                return false;
+
+            var $return = null;
+            elmFunc.elmLoop( elm, function( e ) {
+                if( $return != false )
+                    elmFunc.elmLoop( elm2, function( e2 ) {
+                        $return = (e !== e2 && e.contains( e2 ));
+                    });
+            });
+
+            return $return;
+        },
+
+        // element/s tagName
+        tagName: function tagName( filter ) {
+            // elm = fns._zturn( this, elm );
+            filter = filter || fns.true;
+            var elm = elm || this;
+            elm = (_z.isDOM(elm)||_z.isArray(elm)) ? _z( elm ) : (
+                _z.is_z(elm) ? elm : ( _z.isArray(elm) ? elm : false )
+            );
+
+            if( !elm )
+                elm = this;
+            if( !elm.length )
+                return "";
+
+            var $return = [];
+            elmFunc.elmLoop( elm, function( e ) {
+                var tn;
+                if( e[ 'tagName' ]&&(tn=e.tagName.toLowerCase()) ||
+                    e['outerHTML']&&(tn=( /<([\w:]+)/.exec( e.outerHTML ) || ["", ""] )[1].toLowerCase()) )
+                    if( _z.isFunction(filter) && filter.callSelf( [tn] ) || !_z.isFunction(filter) )
+                        $return.push( tn );
+            });
+
+            return elm.length==1?($return[0]||""):$return;
+        },
+
 		// clone element/elements
 		clone: function cloneNode( deep ) {
 			deep = deep || false;
@@ -4849,174 +4993,217 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return this;
 		},
-		
-		// append element
-		append: function append( $val ) {
-			if( !isset( $val ) || 
-					( !_z.is_z( $val ) && !_z.isDOM( $val )  && !_z.isString( $val ) ) || 
-						!this.length )
-				return this;
-			
-			if( _z.isString( $val ) )
-			{
-				var _$val = _z.parse.parseHTMLNode($val);
-				if( _z.isNodeList( _$val ) )
-					$val = _z.toArray( _$val );
-			}
-			
-			if( _z.isDOM($val)||!_z.is_z($val) )
-				$val = _z($val);
-			
-			var elm = this;
-			elmFunc.elmLoop( elm, function( e ) {
-				if( !e['appendChild'] )
-					return;
 
-				$val.for( function( key, value ) {
-					if( _z.isDOM( value ) || _z.type( value )=='Text' ) {
+        // append element
+        append: function append( $val ) {
+            if( !isset( $val ) ||
+                ( !_z.is_z( $val ) && !_z.isDOM( $val )  && !_z.isString( $val ) ) ||
+                !this.length )
+                return this;
+
+            if( _z.isString( $val ) )
+            {
+                var _$val = _z.parse.parseHTMLNode($val);
+                if( _z.isNodeList( _$val ) )
+                    $val = _z.toArray( _$val );
+            }
+
+            if( _z.isDOM($val)||!_z.is_z($val) )
+                $val = _z($val);
+
+            var elm = this;
+            elmFunc.elmLoop( elm, function( e ) {
+                if( !e['appendChild'] )
+                    return;
+
+                $val.for( function( key, value ) {
+                    if( _z.isDOM( value ) || _z.type( value )=='Text' ) {
                         e['appendChild']( value );
-                        if( (_z(value).tagName() || "") == "script" ) {
-                        	if( _z(value).attr("src") )
-                        		try {
-									_z.getScript(_z(value).attr("src"));
-								} catch(error_) { console.error(error_); }
-                        	// console.log();
-						}
-					}
-				});
-			});
-			return this;
-		},
-		
-		// append to element
-		appendTo: function appendTo( $elm ) {
-			if( !isset( $elm ) || !($elm=_z( $elm )).isDOMElement() || !this.length ) return this;
-			
-			return $elm.append( this ), this.newSelector( null );
-		},
-		
-		// prepend element
-		prepend: function prepend( $val ) {
-			if( !isset( $val ) || 
-					( !_z.is_z( $val ) && !_z.isDOM( $val )  && !_z.isString( $val ) ) || 
-						!this.length )
-				return this;
-			
-			if( _z.isString( $val ) )
-			{
-				var _$val = _z.parse.parseHTMLNode($val);
-				if( _z.isNodeList( _$val ) )
-				{
-					$val = _z.toArray( _$val );
-					if( $val['reverse'] )
-						$val.reverse();
-				}
-			}
-			
-			if( _z.isDOM($val)||!_z.is_z($val) )
-				$val = _z($val);
-			
-			var elm = this;
-			elmFunc.elmLoop( elm, function( e ) {
-				if( !e['insertBefore'] || !e['firstChild'] )
-					return;
-				
-				$val.for( function( key, value ) {
-					if( _z.isDOM( value ) || _z.type( value )=='Text' )
-						e['insertBefore']( value, e['firstChild'] );
-				});
-			});
-			return this;
-		},
-		
-		// prepend to element
-		prependTo: function prependTo( $elm ) {
-			if( !isset( $elm ) || !($elm=_z( $elm )).isDOMElement() || !this.length ) return this;
-			
-			return $elm.prepend( this ), this.newSelector( null );
-		},
-		
-		// insert after element
-		after: function after( $val ) { return elmFunc.insertAdjacentElement.apply( this, [ $val, 'afterend'] ); },
-		
-		// insert before element
-		before: function before( $val ) { return elmFunc.insertAdjacentElement.apply( this, [ $val, 'beforebegin'] ); },
-		
-		// insert element after element
-		insertAfter: function insertAfter( $val ) { return _z( $val ).after( this ), this.newSelector( null ); },
-		
-		// insert element before element
-		insertBefore: function insertBefore( $val ) { return _z( $val ).before( this ), this.newSelector( null ); },
-		
-		// is element shown
-		isShow: function isShow( ret ) {
-			ret = ret || false;
-			status = false;
-			// if( ret )
-				// return this;
-			
-			if( this.length > 1 )
-			{
-				var elm = this,
-					$return=[];
-				elmFunc.elmLoop( elm, function( e ) {
-					if( ret==true && _z(e).isShow() )
-						$return.push( e );
-					else if( ret!=true )
-						$return.push( _z(e).isShow() );
-						
-				});
-				
-				return ret==true ? this.newSelector( $return ) : $return;
-			}
-			
-			if( _z(this))
-			// console.log(this);
-			var status = _z(this).hasClass( 'hidden' ) ? true : 
-				( /hidden|none/i.test( _z( this ).css( 'visibility' ) +" "+ _z( this ).css( 'display' ) ) );
 
-			if( ret==true && !!!status )
-				status = this;
-			else status = !!!status;
-			
-			return status;
-		},
-		
-		// is element hidden
-		isHidden: function isHidden() { return !!!_z( this ).isShow(); },
-		isHide: function isHidden() { return !!!_z( this ).isShow(); },
-		
-		// is element in view
-		inViewport: function inViewport() {
-			$ele = this;
-			var lBound = _z(window).scrollTop(),
-				uBound = lBound + _z(window).height(),
-				top = $ele.offset().top,
-				bottom = top + $ele.outerHeight(true);
+                        if( _z(value).tagName() == "script")
+                            _z.execScript( value );
+                    }
+                });
+            });
+            return this;
+        },
 
-			return (top > lBound && top < uBound)
-				|| (bottom > lBound && bottom < uBound)
-				|| (lBound >= top && lBound <= bottom)
-				|| (uBound >= top && uBound <= bottom);
-		},
-		
-		// fade element/s in/out
-		fadeIn: function fadeIn( speed, callback ) {
-			callback = _z.isFunction(speed)? speed : ( callback || false );
-			speed = _z.isTypes(1,callback) ? callback : ( speed || 1000);
-			callback = !_z.isFunction(callback)? false : callback;
-			// console.log(this,elmFunc,elmFunc.fade);
-			return elmFunc.fade.apply( this, [ 'In', speed, callback ] );
-		},
-		fadeOut: function fadeOut( speed, callback ) {
-			callback = _z.isFunction(speed)? speed : ( callback || false );
-			speed = _z.isTypes(1,callback) ? callback : ( speed || 1000);
-			callback = !_z.isFunction(callback)? false : callback;
-			// console.log(this,elmFunc,elmFunc.fade);
-			return elmFunc.fade.apply( this, [ 'Out', speed, callback ] );
-		},
-		
-		// get childrens of an element
+        // append to element
+        appendTo: function appendTo( $elm ) {
+            if( !isset( $elm ) || !($elm=_z( $elm )).isDOMElement() || !this.length ) return this;
+
+            return $elm.append( this ), this.newSelector( null );
+        },
+
+        // prepend element
+        prepend: function prepend( $val ) {
+            if( !isset( $val ) ||
+                ( !_z.is_z( $val ) && !_z.isDOM( $val )  && !_z.isString( $val ) ) ||
+                !this.length )
+                return this;
+
+            if( _z.isString( $val ) )
+            {
+                var _$val = _z.parse.parseHTMLNode($val);
+                if( _z.isNodeList( _$val ) )
+                {
+                    $val = _z.toArray( _$val );
+                    if( $val['reverse'] )
+                        $val.reverse();
+                }
+            }
+
+            if( _z.isDOM($val)||!_z.is_z($val) )
+                $val = _z($val);
+
+            var elm = this;
+            elmFunc.elmLoop( elm, function( e ) {
+                if( !e['insertBefore'] || !e['firstChild'] )
+                    return;
+
+                $val.for( function( key, value ) {
+                    if( _z.isDOM( value ) || _z.type( value )=='Text' ) {
+                        e['insertBefore']( value, e['firstChild'] );
+
+                        if( _z(value).tagName() == "script")
+                            _z.execScript( value );
+                    }
+                });
+            });
+            return this;
+        },
+
+        // prepend to element
+        prependTo: function prependTo( $elm ) {
+            if( !isset( $elm ) || !($elm=_z( $elm )).isDOMElement() || !this.length ) return this;
+
+            return $elm.prepend( this ), this.newSelector( null );
+        },
+
+        // insert after element
+        after: function after( $val ) { return elmFunc.insertAdjacentElement.apply( this, [ $val, 'afterend'] ); },
+
+        // insert before element
+        before: function before( $val ) { return elmFunc.insertAdjacentElement.apply( this, [ $val, 'beforebegin'] ); },
+
+        // insert element after element
+        insertAfter: function insertAfter( $val ) { return _z( $val ).after( this ), this.newSelector( null ); },
+
+        // insert element before element
+        insertBefore: function insertBefore( $val ) { return _z( $val ).before( this ), this.newSelector( null ); },
+
+        // wrap element
+        wrap: function wrap( $elm ) {
+            if( !isset( $elm ) || !($elm=_z( $elm )).isDOMElement() || !this.length ) return this;
+
+            elmFunc.elmLoop( this, function( e ) {
+                try{
+                    _z(e).before($elm);
+                    _z($elm).append(e);
+                } catch( er ) { }
+            });
+
+            return this;
+        },
+
+        // unwrap element
+        unwrap: function unwrap() {
+            elmFunc.elmLoop( this, function( e ) {
+                try{
+                    var parent = _z(e).parent();
+                    if( !parent.is("body") ) {
+                        parent.before( parent.children() );
+                        parent.remove();
+                    }
+                } catch( er ) { }
+            });
+
+            return this;
+        },
+
+        // is element shown
+        isShow: function isShow( ret ) {
+            ret = ret || false;
+            status = false;
+            // if( ret )
+            // return this;
+
+            if( this.length > 1 )
+            {
+                var elm = this,
+                    $return=[];
+                elmFunc.elmLoop( elm, function( e ) {
+                    if( ret==true && _z(e).isShow() )
+                        $return.push( e );
+                    else if( ret!=true )
+                        $return.push( _z(e).isShow() );
+
+                });
+
+                return ret==true ? this.newSelector( $return ) : $return;
+            }
+
+            if( _z(this))
+            // console.log(this);
+                var status = _z(this).hasClass( 'hidden' ) ? true :
+                    ( /hidden|none/i.test( _z( this ).css( 'visibility' ) +" "+ _z( this ).css( 'display' ) ) );
+
+            if( ret==true && !!!status )
+                status = this;
+            else status = !!!status;
+
+            return status;
+        },
+
+        // is element hidden
+        isHidden: function isHidden() { return !!!_z( this ).isShow(); },
+        isHide: function isHidden() { return !!!_z( this ).isShow(); },
+
+        // is element in view
+        inViewport: function inViewport() {
+            $ele = this;
+            var lBound = _z(window).scrollTop(),
+                uBound = lBound + _z(window).height(),
+                top = $ele.offset().top,
+                bottom = top + $ele.outerHeight(true);
+
+            return (top > lBound && top < uBound)
+                || (bottom > lBound && bottom < uBound)
+                || (lBound >= top && lBound <= bottom)
+                || (uBound >= top && uBound <= bottom);
+        },
+
+        // fade element/s in/out
+        fadeIn: function fadeIn( speed, callback ) {
+            callback = _z.isFunction(speed)? speed : ( callback || false );
+            speed = _z.isTypes(1,callback) ? callback : ( speed || 1000);
+            callback = !_z.isFunction(callback)? false : callback;
+            // console.log(this,elmFunc,elmFunc.fade);
+            return elmFunc.fade.apply( this, [ 'In', speed, callback ] );
+        },
+        fadeOut: function fadeOut( speed, callback ) {
+            callback = _z.isFunction(speed)? speed : ( callback || false );
+            speed = _z.isTypes(1,callback) ? callback : ( speed || 1000);
+            callback = !_z.isFunction(callback)? false : callback;
+            // console.log(this,elmFunc,elmFunc.fade);
+            return elmFunc.fade.apply( this, [ 'Out', speed, callback ] );
+        },
+
+        // animate element
+        animate: function animate( params, speed ) {
+            elm = this;
+            elmFunc.elmLoop( elm, function( e ) {
+                e.style.transition = 'all ' + speed;
+                Object.keys( params ).forEach( (key) => {
+                    e.style[ key ] = params[ key ];
+                });
+
+            });
+
+            return this;
+        },
+
+        // get childrens of an element
 		children: function children( $val ) {
 			var elm = this,
 				$return=[];
@@ -5275,417 +5462,478 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return newInstance;
 		},
-		
-		// get previous element
-		prev: function prev( $val ) {
-			var elm = this,
-				$return=[];
-			elmFunc.elmLoop( elm, function( e ) {
-				if( e['previousElementSibling'] )
-					if( isset( $val ) )
-					{
-						_z.for( [ e['previousElementSibling'] ], function( k, v) {
-							if( _z.isDOM( $val ) )
-							{
-								if( v['isEqualNode'] && v['isEqualNode']( $val ) )
-									$return.push( v );
-							}
-							else if( _z.isTypes( 'selector', $val ) )
-								if( elmFunc.matches( v, $val ) )
-									$return.push( v );
-						});
-					}
-					else
-						$return.push( e['previousElementSibling'] );
-			});
-			
-			var newInstance = this.newSelector( $return );
-			newInstance.args = arguments;
-			newInstance.selector = "";
-			
-			return newInstance;
-		},
-		previous: function() { return this.prev.apply( this, arguments ); },
-		
-		// get equal elements
-		whereIs: function isEqual2() { return elmFunc.matchesAll.apply( this, [ ...arguments, false ] ); },
-		// get not equal elements
-		not: function isNotEqual2() { return elmFunc.matchesAll.apply( this, [ ...arguments, true ] ); },
-		// is equal elements ?
-		is: function isEqual( $val ) {
-			var elm = this,
-				$return=[],
-				$val = 
-						( _z.isDOM( $val ) || _z.isArray( $val ) ) && _z( $val ) ||
-						_z.is_z($val) && $val || 
-						_z.isString( $val ) && _z([ $val ]) || 
-						false;
-			
-			if( !$val )
-				return false;
-			
-			elmFunc.elmLoop( elm, function( e ) {
-				elmFunc.elmLoop( $val, function( e2 ) {
-					if( _z.isDOM( e2 ) )
-						$return.push( ( e['isEqualNode'] && e['isEqualNode']( e2 ) ) );
-					else if( _z.isTypes( 'selector', e2 ) )
-						$return.push( ( elmFunc.matches( e, e2 ) ) );
-					else
-						$return.push( false )
-				}, (_e)=>{ return ( _z.isDOM( _e ) || _z.isString( _e ) ); });
-			});
-			
-			$return = $return.length ? _z( $return ).filter().length : 0;
-			return !!( elm.length&&elm.length===$return);
-		},
-		
-		// element rect (top/left/height/width)
-		rect: function elementRect( scrolls ) {
-			var elm = this,
-				scrolls= isset(scrolls) ? scrolls : true,
-				$return=[],
-				returnKey = _z.isBoolean( scrolls ) ? false : scrolls,
-				scrolls = _z.isBoolean( scrolls ) ? scrolls : true;
-			
-			elmFunc.elmLoop( elm, function( e ) {
-				var tResult = {};
-				
-				if( isWindow( e ) )
-				{
-					var height = e.innerHeight || 
-								e.document.documentElement.clientHeight || 
-								e.document.body.clientHeight || 0,
-						
-						width = e.innerWidth || 
-								e.document.documentElement.clientWidth || 
-								e.document.body.clientWidth || 0;
-					// var height = e.document.documentElement[ "client" + 'Height' ] | 0,
-						// width = e.document.documentElement[ "client" + 'Width' ] | 0;
-					
-					tResult = {
-						top: e.document.documentElement[ "client" + 'Top' ] | 0,
-						right: e.document.documentElement[ "client" + 'Width' ] | 0,
-						left: e.document.documentElement[ "client" + 'Left' ] | 0,
-						bottom: e.document.documentElement[ "client" + 'Height' ] | 0,
-						
-						outerHeight: height,
-						outerHeightWP: height,
-						innerHeight: height,
-						height: height,
-						
-						outerWidth: width,
-						outerWidthWP: width,
-						innerWidth: width,
-						width: width,
-					};
-				}// document
-				else if( e.nodeType === 9 )
-				{
-					var height = Math.max(
-								e.body[ "scroll" + 'Height' ], e.documentElement[ "scroll" + 'Height' ],
-								e.body[ "offset" + 'Height' ], e.documentElement[ "offset" + 'Height' ],
-								e.documentElement[ "client" + 'Height' ]
-							),
-						width = Math.max(
-								e.body[ "scroll" + 'Width' ], e.documentElement[ "scroll" + 'Width' ],
-								e.body[ "offset" + 'Width' ], e.documentElement[ "offset" + 'Width' ],
-								e.documentElement[ "client" + 'Width' ]
-							);
-					
-					tResult = {
-						top: Math.max(
-								e.body[ "scroll" + 'Top' ], e.documentElement[ "scroll" + 'Top' ],
-								e.body[ "offset" + 'Top' ], e.documentElement[ "offset" + 'Top' ],
-								e.documentElement[ "client" + 'Top' ]
-							) | 0,
-						right: Math.max(
-								e.body[ "scroll" + 'Width' ], e.documentElement[ "scroll" + 'Width' ],
-								e.body[ "offset" + 'Width' ], e.documentElement[ "offset" + 'Width' ],
-								e.documentElement[ "client" + 'Width' ]
-							) | 0,
-						left: Math.max(
-								e.body[ "scroll" + 'Left' ], e.documentElement[ "scroll" + 'Left' ],
-								e.body[ "offset" + 'Left' ], e.documentElement[ "offset" + 'Left' ],
-								e.documentElement[ "client" + 'Left' ]
-							) | 0,
-						bottom: Math.max(
-								e.body[ "scroll" + 'Height' ], e.documentElement[ "scroll" + 'Height' ],
-								e.body[ "offset" + 'Height' ], e.documentElement[ "offset" + 'Height' ],
-								e.documentElement[ "client" + 'Height' ]
-							) | 0,
-						
-						outerHeight: height,
-						outerHeightWP: height,
-						innerHeight: height,
-						height: height,
-						
-						outerWidth: width,
-						outerWidthWP: width,
-						innerWidth: width,
-						width: width,
-					};
-				}
-				else
-				{
-					var rect = ( e['getBoundingClientRect'] ) ? e.getBoundingClientRect() : {
-							top: 0,
-							left: 0,
-							bottom: 0,
-							right: 0,
-						};
-					var style = vanilla( 'compStyle' )(e);
-					tResult = {
-								top: (rect.top||0) + (scrolls? (document.body.scrollTop||0) : 0),
-								right: (rect.right||0),
-								left: (rect.left||0) + (scrolls? (document.body.scrollLeft||0) : 0),
-								bottom: (rect.bottom||0),
-								
-								// height of element
-								height: parseInt( style.height ),
-								
-								// outer
-								// the height of an element (includes padding and border).
-								outerHeight: e.offsetHeight,
-											// (
-												// parseInt( style.height ) + 
-												// parseInt(style.paddingTop) + 
-												// parseInt(style.paddingBottom) + 
-												// parseInt(style.borderTop) + 
-												// parseInt(style.borderBottom)
-											// ),
-								
-								// outer
-								// the height of an element (includes padding, border and margin).
-								outerHeightWP: (
-												e.offsetHeight +
-												parseInt(style.marginTop) + 
-												parseInt(style.marginBottom)
-											), 
-											// (
-												// parseInt( style.height ) + 
-												// parseInt(style.paddingTop) + 
-												// parseInt(style.paddingBottom) + 
-												// parseInt(style.borderTop) + 
-												// parseInt(style.borderBottom) +
-												// parseInt(style.marginTop) + 
-												// parseInt(style.marginBottom)
-											// ),
-								
-								// inner
-								// the height of an element (includes padding).
-								innerHeight: e.clientHeight || e.scrollHeight,
-											// (
-												// parseInt(style.height) + 
-												// parseInt(style.paddingTop) + 
-												// parseInt(style.paddingBottom)
-											// ),
-								
-								width: parseInt( style.width ),
-										// (function(e) { var style = vanilla( 'compStyle' )(e);
-											// return e.offsetWidth + 
-											// parseInt(style.marginLeft) + 
-											// parseInt(style.marginRight);
-										// })(e),
-								
-								// the width of an element (includes padding and border).
-								outerWidth: e.offsetWidth,
-										// (function(e) { var style = vanilla( 'compStyle' )(e);
-											// return e.offsetWidth;
-										// })(e),
-								
-								// the width of an element (includes padding, border and margin).
-								outerWidthWP: (
-												e.offsetWidth +
-												parseInt(style.marginLeft) + 
-												parseInt(style.marginRight)
-											), 
-								
-								innerWidth: e.clientWidth || e.scrollWidth,
-										// (function(e) { var style = vanilla( 'compStyle' )(e);
-											// return e.clientWidth;
-										// })(e),
-							};
-				}
-				
-				if( returnKey !== false && isset(tResult[ returnKey ]) )
-					tResult = tResult[ returnKey ];
-				
-				$return.push(tResult);
-				
-			}, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
-			
-			return this.length==1? $return[0] : $return;
-		},
-		
-		// element position (top/left)
-		position: function position() {
-			var elm = this,
-				$return=[];
 
-			elmFunc.elmLoop( elm, function( e ) {
-				if( e['offsetLeft'] && e['offsetLeft'] )
-				{
-					$return.push({
-							top: (e['offsetTop']||0),
-							left: (e['offsetLeft']||0),
-						});
-				}
-			});
-			
-			return this.length==1? $return[0] : $return;
-		},
-		
-		// offsetParent of element ( closest visable parent)
-		offsetParent: function offsetParent() {
-			var elm = this,
-				$return = [];
-			elmFunc.elmLoop( elm, function( e ) {
-				$return.push( e['offsetParent'] || e );
-			});
-			
-			return this.length===1 ? $return[0] : $return;
-		},
-		
-		// parent of element ( direct parent )
-		parent: function elementParent( selector ) {
-			var elm = this,
-				selector = selector || "",
-				$return = [];
-			
-			elmFunc.elmLoop( elm, function( e ) {
-				if( !!selector && e['parentNode'] && _z(e['parentNode']).is( selector ) )
-					$return.push( e['parentNode'] );
-				else if( !!selector && (!e['parentNode'] || !_z(e['parentNode']).is( selector )) )
-				{
-					
-				}
-				else if( !!!selector )
-					$return.push( e['parentNode'] );
-			});
-			
-			var newInstance = this.newSelector( this.length===1 ? $return[0] : $return );
-			newInstance.args = arguments;
-			newInstance.selector = selector;
-			
-			return newInstance;
-		},
-		
-		// parents of element ( all parents )
-		parents: function elementParents( selector ) {
-			var elm = this,
-				selector = selector || "",
-				$return = [],
-				pElement=false;
-			
-			elmFunc.elmLoop( elm, function( e ) {
-				pElement=e;
-				do {
-					pElement = pElement['parentNode'];
-					
-					if( !!selector && pElement && _z.isDOM(pElement) && _z(pElement).is(selector) )
-					{
-						if( !$return.includes( pElement ) )
-							$return.push( pElement );
-						// return;
-					}
-					else if( !!!selector )
-						$return.push( pElement );
-						
-				} while( 
-						( !!!selector && pElement && _z.isDOM(pElement) ) ||
-						( !!selector && pElement && _z.isDOM(pElement) )
-					);
-			});
-			
-			if( !!!$return.length )
-				$return = [];// return _z();
-			
-			var newInstance = this.newSelector( $return );
-			newInstance.args = arguments;
-			newInstance.selector = selector;
-			
-			return newInstance;
-			newInstance.head = elm.length==1 ? elm[0] : newInstance.head;
-			
-			var newReturn = _z( ...this.args );
-			newReturn.newSelector( $return );
-			newReturn.head = elm.length==1 ? elm[0] : newReturn.head;
-			return newReturn;
-		},
-		
-		// replace element with HTML
-		replace: function replaceElement( $html ) {
-			var elm = this,
-				$return = [];
-			elmFunc.elmLoop( elm, function( e ) {
-				if( e['outerHTML'] )
-				{
-					$return.push( _z(e).clone() );
-					e['outerHTML'] = $html;
-				}
-				else if( e['replaceWith'] )
-				{
-					$return.push( _z(e).clone() );
-					e['replaceWith']( $html );
-				}
-				// if( e['parentNode']&&e['parentNode']['replaceChild'] )
-				// {
-					// $return.push( _z(e).clone() );
-					// e['parentNode']['replaceChild']( e, $html );
-				// }
-			});
-			
-			return this.length===1 ? $return[0] : $return;
-		},
-		
-		// trigger an event
-		trigger: function triggerEvent( eventName ) {
-			var elm = this,
-				eventName = eventName || false;
-			if( !eventName )
-				return this;
-			
-			elmFunc.elmLoop( elm, function( e ) {
-				var event = document.createEvent('HTMLEvents');
-				event.initEvent(eventName, true, false);
-				
-				try {
-					// console.log(window.getEventListeners(document),e);
-					// console.log(window.getEventListeners(document),e);
-					// var registeredEvent = window.getEventListeners( e );
-					
-					// if( (!registeredEvent || _z.size( registeredEvent ) < 1 || !_z.isset(registeredEvent[ eventName ])) )
-					// {
-						if( eventName in e && _z.isFunction(e[eventName]) )
-						{
-							// console.groupCollapsed(eventName);
-								// console.count(eventName);
-								// console.trace(e);
-								// console.warn(arguments);
-								// console.warn(e[eventName]);
-							// console.groupEnd(eventName);
-							e[eventName]();
-							// return;
-						}
-					// }
-				} catch (er) {
-					console.error(er);
-				}
-				e.dispatchEvent(event);
-				// console.warn(event);
-				// var event = new Event(eventName);
-				// Dispatch the event.
-				// e.dispatchEvent(event);
+        // get previous element
+        prev: function prev( $val ) {
+            var elm = this,
+                $return=[];
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e['previousElementSibling'] )
+                    if( isset( $val ) )
+                    {
+                        _z.for( [ e['previousElementSibling'] ], function( k, v) {
+                            if( _z.isDOM( $val ) )
+                            {
+                                if( v['isEqualNode'] && v['isEqualNode']( $val ) )
+                                    $return.push( v );
+                            }
+                            else if( _z.isTypes( 'selector', $val ) )
+                                if( elmFunc.matches( v, $val ) )
+                                    $return.push( v );
+                        });
+                    }
+                    else
+                        $return.push( e['previousElementSibling'] );
+            });
 
-				// Listen for the event.
-				// target.addEventListener('build', function (e) { ... }, false);
+            var newInstance = this.newSelector( $return );
+            newInstance.args = arguments;
+            newInstance.selector = "";
 
-			}, fns.true);
-			
-			return this;
-		},
-		
-		// attach an event
+            return newInstance;
+        },
+        previous: function() { return this.prev.apply( this, arguments ); },
+
+        // get equal elements
+        whereIs: function isEqual2() { return elmFunc.matchesAll.apply( this, [ ...arguments, false ] ); },
+        // get not equal elements
+        not: function isNotEqual2() { return elmFunc.matchesAll.apply( this, [ ...arguments, true ] ); },
+        // is equal elements ?
+        is: function isEqual( $val ) {
+            var elm = this,
+                $return=0,
+                $val =
+                    ( _z.isDOM( $val ) || _z.isArray( $val ) ) && _z( $val ) ||
+                    _z.is_z($val) && $val ||
+                    _z.isString( $val ) && _z([ $val ]) ||
+                    false;
+
+            if( !$val )
+                return false;
+
+            elmFunc.elmLoop( elm, function( e ) {
+                elmFunc.elmLoop( $val, function( e2 ) {
+                    if( _z.isDOM( e2 ) )
+                        $return += _z.toNum( e['isEqualNode'] && e['isEqualNode']( e2 ) );
+                    else if( _z.isTypes( 'selector', e2 ) )
+                        elmFunc.matches( e, e2 )&&(++$return);
+                    // else
+                    // $return.push( false )
+                }, (_e)=>{ return ( _z.isDOM( _e ) || _z.isString( _e ) ); });
+            });
+
+            $return = _z.toNum( $return ) || 0;
+            return !!( elm.length&&elm.length===$return);
+        },
+
+        // element rect (top/left/height/width)
+        rect: function elementRect( scrolls ) {
+            var elm = this,
+                scrolls= isset(scrolls) ? scrolls : true,
+                $return=[],
+                returnKey = _z.isBoolean( scrolls ) ? false : scrolls,
+                scrolls = _z.isBoolean( scrolls ) ? scrolls : true;
+
+            elmFunc.elmLoop( elm, function( e ) {
+                var tResult = {};
+
+                if( isWindow( e ) )
+                {
+                    var height = e.innerHeight ||
+                        e.document.documentElement.clientHeight ||
+                        e.document.body.clientHeight || 0,
+
+                        width = e.innerWidth ||
+                            e.document.documentElement.clientWidth ||
+                            e.document.body.clientWidth || 0;
+                    // var height = e.document.documentElement[ "client" + 'Height' ] | 0,
+                    // width = e.document.documentElement[ "client" + 'Width' ] | 0;
+
+                    tResult = {
+                        top: e.document.documentElement[ "client" + 'Top' ] | 0,
+                        right: e.document.documentElement[ "client" + 'Width' ] | 0,
+                        left: e.document.documentElement[ "client" + 'Left' ] | 0,
+                        bottom: e.document.documentElement[ "client" + 'Height' ] | 0,
+
+                        outerHeight: height,
+                        outerHeightWP: height,
+                        innerHeight: height,
+                        height: height,
+
+                        outerWidth: width,
+                        outerWidthWP: width,
+                        innerWidth: width,
+                        width: width,
+                    };
+                }// document
+                else if( e.nodeType === 9 )
+                {
+                    var height = Math.max(
+                        e.body[ "scroll" + 'Height' ], e.documentElement[ "scroll" + 'Height' ],
+                        e.body[ "offset" + 'Height' ], e.documentElement[ "offset" + 'Height' ],
+                        e.documentElement[ "client" + 'Height' ]
+                        ),
+                        width = Math.max(
+                            e.body[ "scroll" + 'Width' ], e.documentElement[ "scroll" + 'Width' ],
+                            e.body[ "offset" + 'Width' ], e.documentElement[ "offset" + 'Width' ],
+                            e.documentElement[ "client" + 'Width' ]
+                        );
+
+                    tResult = {
+                        top: Math.max(
+                            e.body[ "scroll" + 'Top' ], e.documentElement[ "scroll" + 'Top' ],
+                            e.body[ "offset" + 'Top' ], e.documentElement[ "offset" + 'Top' ],
+                            e.documentElement[ "client" + 'Top' ]
+                        ) | 0,
+                        right: Math.max(
+                            e.body[ "scroll" + 'Width' ], e.documentElement[ "scroll" + 'Width' ],
+                            e.body[ "offset" + 'Width' ], e.documentElement[ "offset" + 'Width' ],
+                            e.documentElement[ "client" + 'Width' ]
+                        ) | 0,
+                        left: Math.max(
+                            e.body[ "scroll" + 'Left' ], e.documentElement[ "scroll" + 'Left' ],
+                            e.body[ "offset" + 'Left' ], e.documentElement[ "offset" + 'Left' ],
+                            e.documentElement[ "client" + 'Left' ]
+                        ) | 0,
+                        bottom: Math.max(
+                            e.body[ "scroll" + 'Height' ], e.documentElement[ "scroll" + 'Height' ],
+                            e.body[ "offset" + 'Height' ], e.documentElement[ "offset" + 'Height' ],
+                            e.documentElement[ "client" + 'Height' ]
+                        ) | 0,
+
+                        outerHeight: height,
+                        outerHeightWP: height,
+                        innerHeight: height,
+                        height: height,
+
+                        outerWidth: width,
+                        outerWidthWP: width,
+                        innerWidth: width,
+                        width: width,
+                    };
+                }
+                else
+                {
+                    var rect = ( e['getBoundingClientRect'] ) ? e.getBoundingClientRect() : {
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                    };
+                    var style = vanilla( 'compStyle' )(e);
+                    tResult = {
+                        top: (rect.top||0) + (scrolls? (document.body.scrollTop||0) : 0),
+                        right: (rect.right||0),
+                        left: (rect.left||0) + (scrolls? (document.body.scrollLeft||0) : 0),
+                        bottom: (rect.bottom||0),
+
+                        // height of element
+                        height: parseInt( style.height ),
+
+                        // outer
+                        // the height of an element (includes padding and border).
+                        outerHeight: e.offsetHeight,
+                        // (
+                        // parseInt( style.height ) +
+                        // parseInt(style.paddingTop) +
+                        // parseInt(style.paddingBottom) +
+                        // parseInt(style.borderTop) +
+                        // parseInt(style.borderBottom)
+                        // ),
+
+                        // outer
+                        // the height of an element (includes padding, border and margin).
+                        outerHeightWP: (
+                            e.offsetHeight +
+                            parseInt(style.marginTop) +
+                            parseInt(style.marginBottom)
+                        ),
+                        // (
+                        // parseInt( style.height ) +
+                        // parseInt(style.paddingTop) +
+                        // parseInt(style.paddingBottom) +
+                        // parseInt(style.borderTop) +
+                        // parseInt(style.borderBottom) +
+                        // parseInt(style.marginTop) +
+                        // parseInt(style.marginBottom)
+                        // ),
+
+                        // inner
+                        // the height of an element (includes padding).
+                        innerHeight: e.clientHeight || e.scrollHeight,
+                        // (
+                        // parseInt(style.height) +
+                        // parseInt(style.paddingTop) +
+                        // parseInt(style.paddingBottom)
+                        // ),
+
+                        width: parseInt( style.width ),
+                        // (function(e) { var style = vanilla( 'compStyle' )(e);
+                        // return e.offsetWidth +
+                        // parseInt(style.marginLeft) +
+                        // parseInt(style.marginRight);
+                        // })(e),
+
+                        // the width of an element (includes padding and border).
+                        outerWidth: e.offsetWidth,
+                        // (function(e) { var style = vanilla( 'compStyle' )(e);
+                        // return e.offsetWidth;
+                        // })(e),
+
+                        // the width of an element (includes padding, border and margin).
+                        outerWidthWP: (
+                            e.offsetWidth +
+                            parseInt(style.marginLeft) +
+                            parseInt(style.marginRight)
+                        ),
+
+                        innerWidth: e.clientWidth || e.scrollWidth,
+                        // (function(e) { var style = vanilla( 'compStyle' )(e);
+                        // return e.clientWidth;
+                        // })(e),
+                    };
+                }
+
+                if( returnKey !== false && isset(tResult[ returnKey ]) )
+                    tResult = tResult[ returnKey ];
+
+                $return.push(tResult);
+
+            }, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
+
+            return this.length==1? $return[0] : $return;
+        },
+
+        // element position (top/left)
+        position: function position() {
+            var elm = this,
+                $return=[];
+
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e['offsetLeft'] && e['offsetLeft'] )
+                {
+                    $return.push({
+                        top: (e['offsetTop']||0),
+                        left: (e['offsetLeft']||0),
+                    });
+                }
+            });
+
+            return this.length==1? $return[0] : $return;
+        },
+
+        // offsetParent of element ( closest visable parent)
+        offsetParent: function offsetParent() {
+            var elm = this,
+                $return = [];
+            elmFunc.elmLoop( elm, function( e ) {
+                $return.push( e['offsetParent'] || e );
+            });
+
+            return this.length===1 ? $return[0] : $return;
+        },
+
+        // parent of element ( direct parent )
+        parent: function elementParent( selector ) {
+            var elm = this,
+                selector = selector || "",
+                $return = [];
+
+            elmFunc.elmLoop( elm, function( e ) {
+                if( !!selector && e['parentNode'] && _z(e['parentNode']).is( selector ) )
+                    $return.push( e['parentNode'] );
+                else if( !!selector && (!e['parentNode'] || !_z(e['parentNode']).is( selector )) )
+                {
+
+                }
+                else if( !!!selector )
+                    $return.push( e['parentNode'] );
+            });
+
+            var newInstance = this.newSelector( this.length===1 ? $return[0] : $return );
+            newInstance.args = arguments;
+            newInstance.selector = selector;
+
+            return newInstance;
+        },
+
+        // parents of element ( all parents )
+        parents: function elementParents( selector ) {
+            var elm = this,
+                selector = selector || "",
+                $return = [],
+                pElement=false;
+
+            elmFunc.elmLoop( elm, function( e ) {
+                pElement=e;
+                do {
+                    pElement = pElement['parentNode'];
+
+                    if( !!selector && pElement && _z.isDOM(pElement) && _z(pElement).is(selector) )
+                    {
+                        if( !$return.includes( pElement ) )
+                            $return.push( pElement );
+                        // return;
+                    }
+                    else if( !!!selector )
+                        $return.push( pElement );
+
+                } while(
+                    ( !!!selector && pElement && _z.isDOM(pElement) ) ||
+                    ( !!selector && pElement && _z.isDOM(pElement) )
+                    );
+            });
+
+            if( !!!$return.length )
+                $return = [];// return _z();
+
+            var newInstance = this.newSelector( $return );
+            newInstance.args = arguments;
+            newInstance.selector = selector;
+
+            return newInstance;
+            newInstance.head = elm.length==1 ? elm[0] : newInstance.head;
+
+            var newReturn = _z( ...this.args );
+            newReturn.newSelector( $return );
+            newReturn.head = elm.length==1 ? elm[0] : newReturn.head;
+            return newReturn;
+        },
+
+        // parents of element ( until the selector )
+        parentsUntil: function parentsUntil( selector, filter ) {
+            var elm = this,
+                selector = selector || "",
+                $return = [],
+                filter = filter || fns.true;
+
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e && e["parentElement"] ) {
+                    e = e.parentElement;
+                    while( e && !_z(e).is( selector ) && e["parentElement"] ) {
+                        if( !filter || filter.callSelf( [e] ) )
+                            $return.push( e );
+                        e = e.parentElement;
+                    }
+                }
+            });
+
+            if( !!!$return.length )
+                $return = [];// return _z();
+
+            var newInstance = this.newSelector( $return );
+            newInstance.args = arguments;
+            newInstance.selector = selector;
+
+            return newInstance;
+        },
+
+        // iframe contentDocument
+        contents: function contents( elm ) {
+            var elm = elm || this,
+                $return = [];
+            elm = !is_z(elm) ? _z(elm) : elm;
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e && e["contentDocument"] )
+                    $return.push( e.contentDocument );
+            });
+
+            if( !!!$return.length )
+                $return = [];// return _z();
+
+            var newInstance = this.newSelector( $return );
+            newInstance.args = arguments;
+            newInstance.head = elm.length==1?elm[0]:elm;
+
+            return newInstance;
+        },
+
+        // replace element with HTML
+        replace: function replaceElement( $html ) {
+            var elm = this,
+                $return = [];
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e['outerHTML'] )
+                {
+                    $return.push( _z(e).clone() );
+                    e['outerHTML'] = is_z($html) ? $html.toHTML() : $html;
+                }
+                else if( e['replaceWith'] )
+                {
+                    $return.push( _z(e).clone() );
+                    e['replaceWith']( $html );
+                }
+                // if( e['parentNode']&&e['parentNode']['replaceChild'] )
+                // {
+                // $return.push( _z(e).clone() );
+                // e['parentNode']['replaceChild']( e, $html );
+                // }
+            });
+
+            return this.length===1 ? $return[0] : $return;
+        },
+
+        // replace element with element
+        replaceWith: function replaceElementWith( $elm ) {
+            var elm = this;
+            elmFunc.elmLoop( elm, function( e ) {
+                elmFunc.elmLoop( $elm, function( $e ) {
+                    e.parentNode.insertBefore($e, e);
+                });
+                e.parentNode.removeChild(e);
+            });
+
+            return this;
+        },
+
+        // trigger an event
+        trigger: function triggerEvent( eventName ) {
+            var elm = this,
+                eventName = eventName || false;
+            if( !eventName )
+                return this;
+
+            elmFunc.elmLoop( elm, function( e ) {
+                var event = document.createEvent('HTMLEvents');
+                event.initEvent(eventName, true, false);
+
+                try {
+                    // console.log(window.getEventListeners(document),e);
+                    // console.log(window.getEventListeners(document),e);
+                    // var registeredEvent = window.getEventListeners( e );
+
+                    // if( (!registeredEvent || _z.size( registeredEvent ) < 1 || !_z.isset(registeredEvent[ eventName ])) )
+                    // {
+                    if( eventName in e && _z.isFunction(e[eventName]) )
+                    {
+                        // console.groupCollapsed(eventName);
+                        // console.count(eventName);
+                        // console.trace(e);
+                        // console.warn(arguments);
+                        // console.warn(e[eventName]);
+                        // console.groupEnd(eventName);
+                        e[eventName]();
+                        // return;
+                    }
+                    // }
+                } catch (er) {
+                    console.error(er);
+                }
+                e.dispatchEvent(event);
+                // console.warn(event);
+                // var event = new Event(eventName);
+                // Dispatch the event.
+                // e.dispatchEvent(event);
+
+                // Listen for the event.
+                // target.addEventListener('build', function (e) { ... }, false);
+
+            }, fns.true);
+
+            return this;
+        },
+
+        // attach an event
 		on: function attachEvent( eventName, qselector, callback ) {
 			var elm = this,
 				eventName = eventName || false,
@@ -6148,7 +6396,8 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			var hash = window.location.hash || "";
 			return hash.substr( 1 );
 		},
-		
+
+        // object to url query
 		param: function param( object, perfix, parts ) {
 			var parts = parts || [],
 				perfix = perfix || false,
@@ -6543,22 +6792,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		},
 		
 		// clone Objects
-		clone: function clone( obj ) {
-			try {
-				var copy = Object.create( Object.getPrototypeOf( obj ) ),
-					propNames = Object.getOwnPropertyNames( obj );
-
-				propNames.forEach(function( name ) {
-					var desc = Object.getOwnPropertyDescriptor( obj, name );
-					Object.defineProperty( copy, name, desc );
-				});
-
-				return copy;
-			} catch(e) {
-				console.error( e );
-				return obj;
-			}
-		},
+		clone: cloneObj,
 		
 		// add to end of array
 		arrayAppend: function arrayAppend( array1, array2 ) {
@@ -7036,75 +7270,75 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			js: _load( 'script' ),
 			img: _load( 'img' )
 		  }
-		})(),
-		
-		// eval function when document is ready
-		ready: function ready( fn, load ) { 
-			var d=document,
-				load = load || false;
-			
-			if( !_z.isFunction( fn ) )
-				return this;
-			
-			var $DOMContentLoaded = function() {
-				if(d.readyState != 'loading')
-					if( ( load&&d.readyState == 'interactive' ) || d.readyState == 'complete')
-					{
-						fn();
-						cleanLoadinEvents();
-					}
-			};
-			var $onreadystatechange = function() {
-				if(d.readyState != 'loading')
-					if( ( load&&d.readyState == 'interactive' ) || d.readyState == 'complete')
-					{
-						fn();
-						cleanLoadinEvents();
-					}
-			};
-			
-			var cleanLoadinEvents = function() {
-				if ( d.addEventListener ) {
-					d.removeEventListener( "readystatechange", $DOMContentLoaded, false );
+		})()
 
-				} else {
-					d.detachEvent( "onreadystatechange", $onreadystatechange );
-				}
-			};
-			
-			switch ( d.readyState+(load?'1':'0') ) {
-				case "interactive1": // The document has finished loading. We can now access the DOM elements.
-					fn();
-				break;
-						
-				case "complete"+(load?'1':'0'): // The page is fully loaded.
-					fn();
-				break;
-				
-				// case "loading"+(load?'1':'0'): // The document is still loading.
-				default:
-					if(d.addEventListener) {
-						d.addEventListener('readystatechange', $DOMContentLoaded , false );
-					}
-					else
-					{
-						d.attachEvent('onreadystatechange', $onreadystatechange);
-					}
-				break;
-			}
-			
-			return this;
-		},
-		
-		// eval function when document load
-		load: function load( fn ) {
-			if( !_z.isFunction( fn ) )
-				return this;
-			
-			return this.ready( fn, true );
-		},
-		
-	} ].extend;
+	}, {
+
+        // eval function when document is ready
+        ready: function ready( fn, load ) {
+        var d=document,
+            load = load || false;
+
+        if( !_z.isFunction( fn ) )
+            return this;
+
+        var $DOMContentLoaded = function() {
+            if(d.readyState != 'loading')
+                if( ( load&&d.readyState == 'interactive' ) || d.readyState == 'complete')
+                {
+                    fn();
+                    cleanLoadinEvents();
+                }
+        };
+        var $onreadystatechange = function() {
+            if(d.readyState != 'loading')
+                if( ( load&&d.readyState == 'interactive' ) || d.readyState == 'complete')
+                {
+                    fn();
+                    cleanLoadinEvents();
+                }
+        };
+
+        var cleanLoadinEvents = function() {
+            if ( d.addEventListener ) {
+                d.removeEventListener( "readystatechange", $DOMContentLoaded, false );
+
+            } else {
+                d.detachEvent( "onreadystatechange", $onreadystatechange );
+            }
+        };
+
+        switch ( d.readyState+(load?'1':'0') ) {
+            case "interactive1": // The document has finished loading. We can now access the DOM elements.
+                fn();
+                break;
+
+            case "complete"+(load?'1':'0'): // The page is fully loaded.
+                fn();
+                break;
+
+            // case "loading"+(load?'1':'0'): // The document is still loading.
+            default:
+                if(d.addEventListener) {
+                    d.addEventListener('readystatechange', $DOMContentLoaded , false );
+                }
+                else
+                {
+                    d.attachEvent('onreadystatechange', $onreadystatechange);
+                }
+                break;
+        }
+
+        return this;
+    },
+
+    // eval function when document load
+    load: function load( fn ) {
+        if( !_z.isFunction( fn ) )
+            return this;
+
+        return this.ready( fn, true );
+    }} ].extend;
 	
 	// global variables
 	[ _z, {
