@@ -1,0 +1,43 @@
+.back-to-top, .back-to-top:focus { 
+	color: rgba(0,0,0,.6); 
+	background: rgba(0,0,0,.1);
+}
+.back-to-top {
+    padding: 10px 12px 12px;
+    opacity: 0;
+    -webkit-transform: translate(0,24px);
+    -ms-transform: translate(0,24px);
+    -o-transform: translate(0,24px);
+    transform: translate(0,24px);
+    -webkit-transition: opacity .3s,transform .3s,-webkit-transform .3s;
+    -o-transition: opacity .3s,transform .3s,-webkit-transform .3s;
+    transition: opacity .3s,transform .3s,-webkit-transform .3s;
+}
+.back-to-top, .invisible {
+    visibility: hidden;
+	display: none;
+}
+.back-to-top.affix {
+    visibility: visible;
+	display: block;
+    opacity: 1;
+    z-index: 1030;
+    right: 24px;
+    bottom: 12px;
+    -webkit-transform: translate(0,0);
+    -ms-transform: translate(0,0);
+    -o-transform: translate(0,0);
+    transform: translate(0,0);
+}
+.affix {
+    position: fixed;
+}
+.back-to-top .fa {
+	color: rgba(0,0,0,.6);
+	font-size: 24px;
+	vertical-align: middle;
+}
+.back-to-top:hover {
+    color: #000;
+    background: rgba(0,0,0,.3);
+}
