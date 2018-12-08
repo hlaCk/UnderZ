@@ -3017,8 +3017,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				]
 			);
 		},
-		
-	}, {
+
+        // isJson( JSONString ) true|false
+        isJson: function isJson( json ) {
+            json = json || "";
+            try {
+                return !!(json = JSON.parse(json));
+            } catch( _err ) {
+                console.error("Parse Error[parseJSON]:", _err);
+            }
+
+            return false;
+        },
+
+    }, {
 		// add css role in head
 		cssRole: function cssRole( c ) {
 			if( !isset( _z.cssRole['styleSheet'] ) )
@@ -7275,4 +7287,3 @@ if( !!!_z.vanilla.vanilla )
 })( this );
 
 _z.ready(()=>{ _z.interval.init(true) });
-
