@@ -1,4 +1,6 @@
-/* UnderZ Library 2018 */
+// UnderZ 0.0.9 Beta 1 - JavaScript Library
+// Copyright © 2008-2017 hlaCk (https://github.com/hlaCk)
+// Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window ) {
 // Function.callSelf(args) = Function.apply( Function, args )
@@ -17,50 +19,71 @@ if(typeof Function.prototype.bindSelf !== 'function')
 if(typeof Array.prototype.pushSetter !== 'function')
 	Object.defineProperty( Array.prototype, 'pushSetter', { set: function(v) { return this.push(v); }, configurable: false} );
 
-String.prototype.replaceArray = function(find, replace) {
-	var replaceString = this;
-	for (var i = 0; i < find.length; i++) {
-		replaceString = replaceString.replace(find[i], replace[i]);
-	}
-	return replaceString;
-};
-String.prototype.replaceAll = function(search, replacement) {
-	var target = this;
-	return target.split(search).join(replacement);
-};
-
-Array.prototype.unique = function(keyUnique){
-	var keyUnique = keyUnique || null;
-
-	var u = {}, a = [];
-	for(var i = 0, l = this.length; i < l; ++i){
-		var currentKeyElement = this[i];
-		currentKey = keyUnique !== null ? currentKeyElement[keyUnique] : currentKeyElement;
-		if(u.hasOwnProperty(currentKey)) {
-			continue;
+// String String.replaceArray(Array needle, Array haystack)
+if(typeof String.prototype.replaceArray !== 'function')
+	String.prototype.replaceArray = function(find, replace) {
+		var replaceString = this;
+		for (var i = 0; i < find.length; i++) {
+			replaceString = replaceString.replace(find[i], replace[i]);
 		}
-		a.push(currentKeyElement);
-		u[currentKey] = 1;
-	}
-	return a;
-};
+		return replaceString;
+	};
 
-if(typeof Array.prototype.add !== 'function')
-{
-	Array.prototype.add = function(arr)
-	{
+// String String.replaceAll(String needle, String haystack)
+if(typeof String.prototype.replaceAll !== 'function')
+	String.prototype.replaceAll = function(search, replacement) {
+		var target = this;
+		return target.split(search).join(replacement);
+	};
+
+// METHD1: Normal Array
+	// [1, 2, 3, 1].unique() = [1, 2, 3]
+// METHD2: MultiDimensional Array
+	// var a=[], b=[];
+    // b["ID"]= 1; // [ ID = 1 ]
+    // a.push(b); // [ [ ID = 1 ] ]
+    // b=[]; // []
+    // b["ID"]= 2; // [ ID = 2 ]
+    // a.push(b); // [ [ ID = 1 ], [ ID = 2 ] ]
+    // b=[]; // []
+    // b["ID"]= 3; // [ ID = 3 ]
+    // a.push(b); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ] ]
+    // b=[]; // []
+    // b["ID"]= 1; // [ ID = 1 ]
+    // a.push(b); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ], [ ID = 1 ] ]
+    // a.unique("ID"); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ] ]
+if(typeof Array.prototype.unique !== 'function')
+	Array.prototype.unique = function(keyUnique){
+		var keyUnique = keyUnique || null;
+
+		var u = {}, a = [];
+		for(var i = 0, l = this.length; i < l; ++i){
+			var currentKeyElement = this[i];
+			currentKey = keyUnique !== null ? this[keyUnique] : currentKeyElement;
+			if(u.hasOwnProperty(currentKey)) {
+				continue;
+			}
+			a.push(currentKeyElement);
+			u[currentKey] = 1;
+		}
+		return a;
+	};
+
+// Array Array.add( ARRAY ) = add multi var
+if(typeof Array.prototype.add !== 'function') {
+	Array.prototype.add = function(arr) {
 		var arr = arr || {};
+		if( !((typeof arr) in { 'function':0, 'FUNCTION':0, 'object':0, 'OBJECT':0 }) )
+			arr = [ arr ];
+		
 		if((typeof this.push) in { 'function':0, 'FUNCTION':0 })
-		{
 			return this.push.apply(this, arr);
-		}
 		else
-		{
 			return _z.extend(true, this, _z.extend(true, _z(this).toArray(), arr));
-		}
 	};
 }
 
+// Array Array.inArray(needle, haystack) = index OR -1 if not found
 if(typeof Array.prototype.inArray !== 'function')
 	Array.prototype.inArray = function(needle, haystack) {
 		var haystack = haystack || this;
@@ -75,6 +98,7 @@ if(typeof Array.prototype.inArray !== 'function')
 		return -1;
 	};
 
+// Array Array.remove(from, to) = remove vars by index or value
 if(typeof Array.prototype.remove !== 'function')
 	// Array Remove - By John Resig (MIT Licensed)
 	Array.prototype.remove = function(from, to) {
@@ -91,53 +115,78 @@ if(typeof Array.prototype.remove !== 'function')
 		return this.push.apply(this, rest);
 	};
 
+// String Number.plus( number ) = +1 to large number
 if(typeof Number.prototype.plus !== 'function')
-    // 9999999999999998
+    // 9999999999999998// 9999999999999998
     Number.prototype.plus= function(num){
         if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
             var data2 = String(this).substr(-5);
             var data1 = String(this).substr(0, String(this).length - 5);
+            var nW = "";
+            for(var n_ = 0; n_ < data2.length; n_++) {
+                if(data2.substr(n_, 1) == "0")
+                    nW += "0";
+                else
+                    break;
+            }
+            if( nW.length )
+            	data2 = data2.substr(nW.length, data2.length -nW.length);
+
             var r = Number(data2) + Number(num);
-            return String(data1) + String(r);
+            return String(data1) + String(nW) + String(r);
         }
         return Number(this) + Number(num);
     };
 
+// String Number.minus( number ) = -1 to large number
 if(typeof Number.prototype.minus !== 'function')
     // 9999999999999998
     Number.prototype.minus= function(num){
         if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
             var data2 = String(this).substr(-5);
             var data1 = String(this).substr(0, String(this).length - 5);
+            var nW = "";
+            for(var n_ = 0; n_ < data2.length; n_++) {
+                if(data2.substr(n_, 1) == "0")
+                    nW += "0";
+                else
+                    break;
+            }
+            if( nW.length )
+                data2 = data2.substr(nW.length, data2.length -nW.length);
+
             var r = Number(data2) - Number(num);
-            return String(data1) + String(r);
+            return String(data1) + String(nW) + String(r);
         }
         return Number(this) - Number(num);
     };
 
+
+// String String.plus( number ) = +1 to large number
 if(typeof String.prototype.minus !== 'function')
     String.prototype.minus = Number.prototype.minus;
+// String String.minus( number ) = -1 to large number
 if(typeof String.prototype.plus !== 'function')
     String.prototype.plus = Number.prototype.plus;
 
 // variables
 var
-	// window
+	// window - private var
 	window = window || this,
 	
-	// document
+	// document - private var
 	doc = window.document || this.document || document,
 
-	// global variable
+	// global variable - public var for private use in window.gVar
 	gVar = window.gVar || (window.gVar = gVar = {}),
 
-	// global jQuery
+	// global jQuery - private var
 	globaljQuery = window["jQuery"] || new Function("return false"),
 
-	// engine version
+	// engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
 	version = '0.0.9 b-1',
 	
-	// prototypes of objects
+	// prototypes of objects - public var in _z.privates.protos
 	protos = {
 		object: Object.prototype,
 		element: Element.prototype,
@@ -157,13 +206,13 @@ var
 		},
 	},
 	
-	// is `elm` instanceof _z
+	// is `elm` instanceof _z - public function in _z.is_z( Object ) = true|false
 	is_z = function( elm ) { return elm instanceof _z; },
 	
-	// is _z prototype
+	// is _z prototype - public function in _z.isCore( Object ) = true|false
 	isCore = function( elm ) { return _z===elm && elm.prototype === _z.prototype; },
 	
-	// `val` in `obj`
+	// `val` in `obj` - public function in _z.hasProp( Object, Property), _z(Object).hasProp(Property) = true | false
 	hasProp = function hasProp( obj, val ) {
 		return protos.object.hasOwnProperty.call( 
 					(arguments.length===1 ? this : obj), 
@@ -171,7 +220,7 @@ var
 				);
 	},
 	
-	// isset `val`
+	// isset `val` - public function in _z.isset(var) = true|false
 	isset = function isset( val ) {
 		if( arguments.length > 1 )
 			for(var i=0,i2=arguments.length; i<i2;i++)
@@ -180,7 +229,7 @@ var
 		return val !== void 0 || typeof(val) !== 'undefined';
 	},
 	
-	// trim prototype
+	// trim prototype - public function in _z.trim( String ) = trimmed String
 	triming = (protos.string.trim&&protos.string.trim || function trimString(str) {
 		return (str||this).replace(/^\s+/, '').replace(/\s+$/, '');
 	}),
