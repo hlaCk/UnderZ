@@ -17,7 +17,7 @@
     </script>
 
     <script type="text/javascript">
-        /*// when document ready
+        // when document ready
         _z.ready(()=>{
             // load plugin: toggle blocks by click
             _z
@@ -25,61 +25,61 @@
                 .require({ js: [ './plugins/togglebyclick.jPlugin.js' ] })
                 .hook( _z )
                 .init(fns.true);
+        /*
+                    // worker
+                    _z
+                        .declare('worker')
+                        .require({ js: [ './plugins/worker.jPlugin.js' ] })
+                        .init(()=>{return !!(document.querySelectorAll("script[type^='text\/_z-\']").length); });
 
-            // worker
-            _z
-                .declare('worker')
-                .require({ js: [ './plugins/worker.jPlugin.js' ] })
-                .init(()=>{return !!(document.querySelectorAll("script[type^='text\/_z-\']").length); });
+                    // issetAnd
+                    _z
+                        .declare('issetAnd')
+                        .require({ js: [ './plugins/issetAnd.jPlugin.js' ] })
+                        .init(fns.false);
 
-            // issetAnd
-            _z
-                .declare('issetAnd')
-                .require({ js: [ './plugins/issetAnd.jPlugin.js' ] })
-                .init(fns.false);
+                    // sizeFormat * addon
+                    _z
+                        .declare('sizeFormat')
+                        .require({ js: [ './addons/sizeFormat.js' ] });
 
-            // sizeFormat * addon
-            _z
-                .declare('sizeFormat')
-                .require({ js: [ './addons/sizeFormat.js' ] });
+                    // label2
+                    _z
+                        .declare('label2')
+                        .require({ js: [ './plugins/label2.jPlugin.js' ] })
+                        .global()
+                        .init(function () {
+                            var MObj = _z( ".moveAble" );
+                            MObj.for(function( i, e ) {
+                                new label2({ 'element': e });
+                            });
 
-            // label2
-            _z
-                .declare('label2')
-                .require({ js: [ './plugins/label2.jPlugin.js' ] })
-                .global()
-                .init(function () {
-                    var MObj = _z( ".moveAble" );
-                    MObj.for(function( i, e ) {
-                        new label2({ 'element': e });
-                    });
+                            return !!MObj.length;
+                        });
 
-                    return !!MObj.length;
-                });
+                    // wrapWith
+                    _z
+                        .declare('wrapWith', _z.$ )
+                        .require({ js: [ './plugins/wrapWith.jPlugin.js' ] })
+                        .init(function () {
+                            return !!( !!_z( "[wrapWith]" ).length && _z( '[wrapWith]' ).wrapWith() );
+                        });
 
-            // wrapWith
-            _z
-                .declare('wrapWith', _z.$ )
-                .require({ js: [ './plugins/wrapWith.jPlugin.js' ] })
-                .init(function () {
-                    return !!( !!_z( "[wrapWith]" ).length && _z( '[wrapWith]' ).wrapWith() );
-                });
+                    // backtotop
+                    _z
+                        .declare('backtotop')
+                        .require({ js: './plugins/backtotop/backtotop.js' })
+                        .require({ css: './plugins/backtotop/backtotop.css' })
+                        .init(function declarebTTInit() {
+                            var initModule = _z(document).height() > (2 * _z(window).height());
+                            if( initModule && _z.isset(window['backtotop']) && _z.isset(window['backtotop']['onload']) )
+                                _z.ready(window['backtotop']['onload']);
 
-            // backtotop
-            _z
-                .declare('backtotop')
-                .require({ js: './plugins/backtotop/backtotop.js' })
-                .require({ css: './plugins/backtotop/backtotop.css' })
-                .init(function declarebTTInit() {
-                    var initModule = _z(document).height() > (2 * _z(window).height());
-                    if( initModule && _z.isset(window['backtotop']) && _z.isset(window['backtotop']['onload']) )
-                        _z.ready(window['backtotop']['onload']);
+                            return initModule;
+                        });
 
-                    return initModule;
-                });
-
-            fns.arg( _z.is_z($), _z.isCore($) );
-        });*/
+                    fns.arg( _z.is_z($), _z.isCore($) );
+                });*/
     </script>
 </head>
 <body>
