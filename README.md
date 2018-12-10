@@ -8,7 +8,9 @@
 1. Get the library file [_z.js](https://github.com/hlaCk/UnderZ/blob/master/_z.js) and place it in your project folder.
 2. Include the library in your html file inside `<head>` tag, **better if it is The First JavaScript Include**: 
 ```html
+<head>
 <script type="text/javascript" src="_z.js"></script>
+</head>
 ```
 3. Done!.
 
