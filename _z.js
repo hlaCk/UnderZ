@@ -1620,22 +1620,30 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		if( arguments.length == 1 && arguments[0] instanceof _z )
 			return arguments[0];
-		
-		if( arguments[0] && $this.isFunction(arguments[0]) ) {
-			if( $this.execFunctions  )
+
+		// check if the argument is function to try to execute it
+		if( arguments[0] && _z.isFunction(arguments[0]) ) {
+			if( $this.execFunctions || $this.$.execFunctions || false )
 			{
 				arguments[0].call(doc, arguments[0]);
-				return $this( doc );
+				return _z( doc );
 			}
 			else arguments[0] = [ arguments[0] ];
 		}
 		
 		return new ( $this.$.init.bind( $this.$ ) )( ...arguments );
 	};
-	
+
+	// execute function addon if sent as element
 	_z.f = function exec() { return _z.apply( _z.f, arguments ); };
-	_z.f.execFunctions = true;
-	
+	// status of execute function addon
+    _z.f.execFunctions = true;
+	// change/get status of execute function addon
+	_z.f.status = function execFunctionsStatus(d) {
+	    d = d == false ? false : d == true ? true : 9;
+	    return d == 9 ? _z.$.execFunctions : (_z.$.execFunctions = d);
+	};
+
 	_z.extend = extendFunction;
 	_z.cloneFunction = cloneFunction;
 	_z.mix = mix;
@@ -3027,7 +3035,37 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return this;
 		},
-		
+
+        // execute functions that in _z(FUNCTION)
+        exec: function execFtunctions( doExec ) {
+            doExec = doExec == false ? false : true;
+            elms = is_z(this) ? this : false;
+            if( !elms || elms.length < 1 ) return this;
+
+            try {
+                var resp = [];
+
+                elmFunc.elmLoop( elms, function( e ) {
+                    try {
+                        if( doExec ) {
+                            e.call(doc);
+                        } else {
+                            resp.push(e);
+                        }
+                    } catch( err ) {
+                        console.error( err );
+                    }
+                }, (f)=>_z.isFunction(f) );
+
+                if( !doExec )
+                    return _z(resp);
+
+            } catch(eEval) {
+                console.error(eEval);
+            }
+
+            return this;
+        },
 	};
 	
 	// for _z
@@ -3204,6 +3242,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
             return this;
         },
+
     }].extend;
 	
 	// shared, functions in _z & _z()
