@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/_z.js" line="6555" />
+    <bookmark url="file://$PROJECT_DIR$/_z.js" line="6209" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="7f3d5f6a-0753-4325-b5d3-a46c930d11b6" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -11,11 +15,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="_z.js" pinned="false" current-in-tab="false">
+      <file leaf-file-name="_z.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/_z.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="99">
-              <caret line="1627" column="16" lean-forward="true" selection-start-line="1627" selection-start-column="16" selection-end-line="1627" selection-end-column="16" />
+            <state relative-caret-position="596">
+              <caret line="5996" selection-start-line="5996" selection-end-line="5996" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#52643#57495#0" />
@@ -43,22 +47,25 @@
                 <element signature="e#99111#99792#0" />
                 <element signature="e#99860#100184#0" />
                 <element signature="e#100232#102729#0" />
-                <element signature="e#102776#108978#0" />
                 <element signature="e#109025#114960#0" />
                 <element signature="e#114997#132821#0" />
                 <element signature="e#132881#133105#0" />
                 <element signature="e#133179#133316#0" />
                 <element signature="e#133562#137774#0" />
+                <element signature="e#216319#216426#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="test.html" pinned="false" current-in-tab="true">
+      <file leaf-file-name="test.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="352">
-              <caret line="15" column="15" selection-start-line="15" selection-start-column="15" selection-end-line="15" selection-end-column="15" />
+            <state relative-caret-position="86">
+              <caret line="109" column="73" selection-start-line="109" selection-start-column="73" selection-end-line="109" selection-end-column="73" />
+              <folding>
+                <element signature="e#536#3158#0" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -71,10 +78,23 @@
       <find>isFunction</find>
       <find>execute</find>
       <find>__zElementsFunctions</find>
+      <find>ready:</find>
+      <find>readyState</find>
       <find>execFunctions</find>
+      <find>_ =</find>
+      <find>on:</find>
+      <find>on:</find>
+      <find>foreach</find>
+      <find>mouseenter</find>
+      <find>dblclick</find>
+      <find>mouseleave</find>
+      <find>un:</find>
+      <find>Array.from</find>
+      <find>hover</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
@@ -121,8 +141,10 @@
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="H:/Program Files/Git/bin/git.exe" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="settings.editor.selected.configurable" value="vcs.Git" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -146,18 +168,18 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1544486363967</updated>
-      <workItem from="1544486365442" duration="3075000" />
+      <workItem from="1544486365442" duration="19485000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="3075000" />
+    <option name="totallyTimeSpent" value="19485000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.25" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Docker" show_stripe_button="false" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
@@ -166,7 +188,7 @@
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Version Control" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info anchor="bottom" id="Terminal" />
+      <window_info anchor="bottom" id="Terminal" weight="0.32946146" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info id="Favorites" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" />
@@ -185,10 +207,20 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/test.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="86">
+          <caret line="109" column="73" selection-start-line="109" selection-start-column="73" selection-end-line="109" selection-end-column="73" />
+          <folding>
+            <element signature="e#536#3158#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/_z.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="99">
-          <caret line="1627" column="16" lean-forward="true" selection-start-line="1627" selection-start-column="16" selection-end-line="1627" selection-end-column="16" />
+        <state relative-caret-position="596">
+          <caret line="5996" selection-start-line="5996" selection-end-line="5996" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#52643#57495#0" />
@@ -216,20 +248,13 @@
             <element signature="e#99111#99792#0" />
             <element signature="e#99860#100184#0" />
             <element signature="e#100232#102729#0" />
-            <element signature="e#102776#108978#0" />
             <element signature="e#109025#114960#0" />
             <element signature="e#114997#132821#0" />
             <element signature="e#132881#133105#0" />
             <element signature="e#133179#133316#0" />
             <element signature="e#133562#137774#0" />
+            <element signature="e#216319#216426#0" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="15" column="15" selection-start-line="15" selection-start-column="15" selection-end-line="15" selection-end-column="15" />
         </state>
       </provider>
     </entry>

@@ -14,70 +14,71 @@
         });
         // if you have jQuery comment this line
         $ = _z;
+        // _z.f.status(true)
     </script>
 
     <script type="text/javascript">
         // when document ready
         _z.ready(()=>{
-            // load plugin: toggle blocks by click
-            _z
-                .declare('toggleByClick', _z.$)
-                .require({ js: [ './plugins/togglebyclick.jPlugin.js' ] })
-                .hook( _z )
-                .init(fns.true);
-        /*
-                    // worker
-                    _z
-                        .declare('worker')
-                        .require({ js: [ './plugins/worker.jPlugin.js' ] })
-                        .init(()=>{return !!(document.querySelectorAll("script[type^='text\/_z-\']").length); });
+            /* // load plugin: toggle blocks by click
+             _z
+                 .declare('toggleByClick', _z.$)
+                 .require({ js: [ './plugins/togglebyclick.jPlugin.js' ] })
+                 .hook( _z )
+                 .init(fns.true);
+       /*
+                     // worker
+                     _z
+                         .declare('worker')
+                         .require({ js: [ './plugins/worker.jPlugin.js' ] })
+                         .init(()=>{return !!(document.querySelectorAll("script[type^='text\/_z-\']").length); });
 
-                    // issetAnd
-                    _z
-                        .declare('issetAnd')
-                        .require({ js: [ './plugins/issetAnd.jPlugin.js' ] })
-                        .init(fns.false);
+                     // issetAnd
+                     _z
+                         .declare('issetAnd')
+                         .require({ js: [ './plugins/issetAnd.jPlugin.js' ] })
+                         .init(fns.false);
 
-                    // sizeFormat * addon
-                    _z
-                        .declare('sizeFormat')
-                        .require({ js: [ './addons/sizeFormat.js' ] });
+                     // sizeFormat * addon
+                     _z
+                         .declare('sizeFormat')
+                         .require({ js: [ './addons/sizeFormat.js' ] });
 
-                    // label2
-                    _z
-                        .declare('label2')
-                        .require({ js: [ './plugins/label2.jPlugin.js' ] })
-                        .global()
-                        .init(function () {
-                            var MObj = _z( ".moveAble" );
-                            MObj.for(function( i, e ) {
-                                new label2({ 'element': e });
-                            });
+                     // label2
+                     _z
+                         .declare('label2')
+                         .require({ js: [ './plugins/label2.jPlugin.js' ] })
+                         .global()
+                         .init(function () {
+                             var MObj = _z( ".moveAble" );
+                             MObj.for(function( i, e ) {
+                                 new label2({ 'element': e });
+                             });
 
-                            return !!MObj.length;
-                        });
+                             return !!MObj.length;
+                         });
 
-                    // wrapWith
-                    _z
-                        .declare('wrapWith', _z.$ )
-                        .require({ js: [ './plugins/wrapWith.jPlugin.js' ] })
-                        .init(function () {
-                            return !!( !!_z( "[wrapWith]" ).length && _z( '[wrapWith]' ).wrapWith() );
-                        });
+                     // wrapWith
+                     _z
+                         .declare('wrapWith', _z.$ )
+                         .require({ js: [ './plugins/wrapWith.jPlugin.js' ] })
+                         .init(function () {
+                             return !!( !!_z( "[wrapWith]" ).length && _z( '[wrapWith]' ).wrapWith() );
+                         });
 
-                    // backtotop
-                    _z
-                        .declare('backtotop')
-                        .require({ js: './plugins/backtotop/backtotop.js' })
-                        .require({ css: './plugins/backtotop/backtotop.css' })
-                        .init(function declarebTTInit() {
-                            var initModule = _z(document).height() > (2 * _z(window).height());
-                            if( initModule && _z.isset(window['backtotop']) && _z.isset(window['backtotop']['onload']) )
-                                _z.ready(window['backtotop']['onload']);
+                     // backtotop
+                     _z
+                         .declare('backtotop')
+                         .require({ js: './plugins/backtotop/backtotop.js' })
+                         .require({ css: './plugins/backtotop/backtotop.css' })
+                         .init(function declarebTTInit() {
+                             var initModule = _z(document).height() > (2 * _z(window).height());
+                             if( initModule && _z.isset(window['backtotop']) && _z.isset(window['backtotop']['onload']) )
+                                 _z.ready(window['backtotop']['onload']);
 
-                            return initModule;
-                        });
-        */
+                             return initModule;
+                         });
+         */
                     fns.arg( _z.is_z($), _z.isCore($) );
                 });
     </script>
@@ -94,9 +95,65 @@
         }).open();*/
     </script>
 
+    <script>
+        _z(function() {
+
+
+
+            // mousein event
+            function hoverin() {
+                _z(".p3").html( "IN:" + _z(this).attr("class") + " line" );
+                _z(this).css("background-color", "lightblue");
+            }
+// mouseout event
+            function hoverout() {
+                _z(".p3").html( "OUT:" + _z(this).attr("class") + " line" );
+                _z(this).css("background-color", "lightgray");
+            }
+
+// bind mouse out event by element class
+            _z(".p1").hover(false, hoverout);
+
+// bind mouse in event by element tag - this will bind the event with all elements with "p" tag.
+            _z("p").hover(hoverin);
+
+// bind mouse in/out event by element class
+            _z(".p3").hover(hoverin, hoverout);
+
+// unbind mouse out event by element class.
+            _z("#btn1").click(function () {
+                _z(".p1").un("hover", hoverout);
+            });
+// unbind mouse in event by element class.
+            _z("#btn2").click(function () {
+                _z(".p2").un("hover", hoverin);
+            });
+// unbind mouse in event by element class.
+            _z("#btn3").click(function () {
+                _z(".p3").un("hover", [ hoverin, hoverout ]);
+// or
+//	_z(".p3").un("hover");
+            });
+
+
+
+        });
+    </script>
+
     <label id="label">Label</label>
 <input type="text" value="Text" id="text">
-    <button value="" id="button">Button</button>
+    <button id="button">Show Message & Change Title</button>
+    <button class="btnCTitle">Change Title</button>
+    <button class="btnUBEvent">Unbind "Change Title" event</button>
+
+    <p class="p1">p1 line</p>
+    <p class="p2">p2 line</p>
+    <p class="p3">p3 line</p>
+
+    <button id="btn1">Remove first line hover out</button>
+    <button id="btn2">Remove second line hover in</button>
+    <button id="btn3">Remove third line hover in/out</button>
+
 
 
 </body>

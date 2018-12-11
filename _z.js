@@ -1623,10 +1623,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
 		// check if the argument is function to try to execute it
 		if( arguments[0] && _z.isFunction(arguments[0]) ) {
-			if( $this.execFunctions || $this.$.execFunctions || false )
-			{
-				arguments[0].call(doc, arguments[0]);
-				return _z( doc );
+			if( $this.execFunctions || $this.$.execFunctions || false ) {
+			    if( _z.document.isReady() )
+			        return arguments[0].call(doc, arguments[0]);
+			    else
+			        return _z.ready(arguments[0]);
+
+				// return _z( doc );
 			}
 			else arguments[0] = [ arguments[0] ];
 		}
@@ -1706,7 +1709,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		constructor: _z,
 		// allow to execute functions
-		execFunctions: false,
+		execFunctions: true,
 		
 		// create new instance _z()
 		init: function UnderZ() {
@@ -5981,6 +5984,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( !eventName )
                 return this;
 
+            // handle multi event
+            if( _z.isString(eventName) && eventName.split(" ").length > 1 )
+                eventName = eventName.split(" ");
+
+            if( _z.isArray(eventName) ) {
+                eventName = _z.filter(eventName).toArray();
+
+                _z.for(eventName, function(eKey, eName) {
+                    _z(elm).trigger(eName);
+                });
+
+                return this;
+            }
+
             elmFunc.elmLoop( elm, function( e ) {
                 var event = document.createEvent('HTMLEvents');
                 event.initEvent(eventName, true, false);
@@ -6027,9 +6044,25 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				eventName = eventName || false,
 				qselector = qselector || false,
 				callback = callback || false;
-			if( !eventName || !qselector || arguments.length < 2 )
+
+			// if multi elements
+            if( eventName && _z.isObject(eventName) && arguments.length < 2 ) {
+                _z.for(eventName, function(eName, eCB) {
+                    if( _z.isFunction(eCB) ) {
+                        _z(elm).on(eName, eCB);
+                    } else if( _z.isObject(eCB) ) {
+                        _z.for(eCB, function(eSelector, eCB_) {
+                            if (_z.isFunction(eCB_))
+                                _z(elm).on(eName, eSelector, eCB_);
+                        });
+                    }
+                });
+                return this;
+            }
+
+			if( !eventName || !qselector )
 				return this;
-			
+
 			if( arguments.length == 2 && _z.isFunction( qselector ) )
 				callback = qselector,
 				qselector = false;
@@ -6120,21 +6153,76 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				eventName = eventName || false,
 				qselector = qselector || false,
 				callback = callback || false;
-				
-			if( !eventName && !qselector && arguments.length < 1 )
-				return this;
-			
-			if( arguments.length == 2 && _z.isFunction( qselector ) )
-				callback = qselector,
-				qselector = false;
-			
+
+            if( !eventName && !qselector && arguments.length < 1 )
+                return this;
+
+			// .un(callback)
+			if( arguments.length == 1 && _z.isFunction( eventName ) ) {
+                callback = eventName;
+                qselector = false;
+                eventName = "*";
+            }
+
+			// .un(eventName, callback)
+			if( arguments.length == 2 ) {
+                if( _z.isFunction( qselector ) || (_z.isArray( qselector ) && _z.isFunction( qselector[0] )))
+                    callback = qselector,
+                    qselector = false;
+            }
+
+			// .un("hover")
+			if( eventName == "hover" )
+                eventName = "mouseenter mouseleave";
+
+			// hamdle multi callback
+            if( callback && _z.isArray(callback) ) {
+                var oldArgs = _z.filter([eventName, qselector||"", callback||""]).toArray();
+
+                _z.for(callback, function(cKey, cName) {
+                    oldArgs.pop();
+                    oldArgs.push(cName);
+                    _z(elm).un(...oldArgs);
+                });
+                return this;
+            }
+
+			// handle multi event
+			if( _z.isString(eventName) && eventName.split(" ").length > 1 )
+			    eventName = eventName.split(" ");
+
+			if( _z.isArray(eventName) ) {
+			    var oldArgs = _z.filter([eventName, qselector||"", callback||""]).toArray();
+
+                _z.for(eventName, function(eKey, eName) {
+                    oldArgs.shift();
+                    oldArgs.unshift(eName);
+                    _z(elm).un(...oldArgs);
+                });
+                return this;
+            }
+
 			elmFunc.elmLoop( elm, function( e ) {
-				var rEL = registeredEvents.find( 
-					!callback ? { 
-						element: e,
-						name: eventName,
-						qselector: qselector
-					} : callback );
+			    var needleData = false;/*!callback ? {
+                                    element: e,
+                                    name: eventName,
+                                    qselector: qselector
+                                } : false;*/
+			    if( needleData == false ) {
+                    needleData = {};
+                    e&&(needleData['element'] = e);
+                    eventName&&(needleData['name'] = eventName);
+                    qselector&&(needleData['qselector'] = qselector);
+                    callback&&(needleData['realcallback'] = callback);
+                }
+
+                var rEL = registeredEvents.find(needleData);
+				// var rEL = registeredEvents.find(
+				// 	!callback ? {
+				// 		element: e,
+				// 		name: eventName,
+				// 		qselector: qselector
+				// 	} : callback );
 				if( rEL.length )
 					_z.for(rEL, function(ELK, ELV){
 						ELV['remover']&&ELV['remover']();
@@ -6458,7 +6546,22 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 								this.trigger( event );
 					}
 				};
-			})
+			}),
+        {
+        // mouse hover
+            hover: function hover(enterCB, outCB) {
+                if( !arguments.length )
+                    return this.trigger("mouseenter mouseleave");
+
+                if( _z.isFunction(enterCB) )
+                    this.on( "mouseenter", enterCB );
+                if( _z.isFunction(outCB) )
+                    this.on( "mouseleave", outCB );
+
+                return this;
+            }
+        },
+
 	].extend;
 // _z.$ }
 
@@ -7579,8 +7682,8 @@ window.meme = window.hh = window.mm = window.zx = window.Q = window._z = window.
 window._z = _z;
 window.hook = hook;
 
-if(!window._)
-	window._ = _z.ready;
+if( !window._ )
+	window._ = _z.ready.bind(_z);
 
 if( typeof define === "function" && define.amd && define.amd._z ) {
 	define( "_z", [], function () { return _z; } );
