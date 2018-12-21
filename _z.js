@@ -2035,19 +2035,27 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			return this;
 		},
 		
-		// update current elements
+		// add elements, return new underz
 		add: function addElements( anElements ) {
 			try {
 				(aE=toArray( anElements )) && ( anElements = aE);
 			} catch ( err ) { }
 			( $anElements=this.element() ).push( ...( typeOfVar( anElements )=='array' ? anElements : [anElements] ) );
+
 			return this.newSelector( $anElements );
-			// this.update( anElements );
-			
-			// this.args = this.selector = this.element();
-			return this;
 		},
-		
+
+		// add elements to this object, return same underz
+		addThis: function addThisElements( anElements ) {
+			try {
+				(aE=toArray( anElements )) && ( anElements = aE);
+			} catch ( err ) { }
+			( $anElements=this.element() ).push( ...( typeOfVar( anElements )=='array' ? anElements : [anElements] ) );
+
+            this.update( $anElements );
+            return this;
+		},
+
 		// create new selector and save current
 		newSelector: function newSelector() {
 			var lastSelector = new ( newSelector.proto.init.bind( newSelector.proto ) )( this.info, this.element() );
