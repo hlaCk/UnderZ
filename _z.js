@@ -3,6 +3,85 @@
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window ) {
+
+    // number object
+    var Num = function( n ) {
+        var $this = this;
+        if(n instanceof Num){
+            $this.value = n.toString();
+            return;
+        }
+        $this.value = Array.prototype.slice.call( String(n) );
+    };
+    with({_n: Num.prototype}){
+        _n.toString = _n.valueOf = function toString(){
+            return this.value.join("");
+        };
+        // plus
+        _n.plus = function Plus(n) {
+            var n1 = Array.from( this.value ).reverse(),
+                n2 = Array.prototype.slice.call( String(n) ).reverse(),
+                n3 = [];
+            var res = "";
+
+            _z.for(n1, function(nKey, nVal) {
+                var n2_;
+                // second hand value
+                n2_ = ( nKey < n2.length ) ? n2[nKey] : "0";
+
+                res = (res===""?0:Number(res.join(""))) + Number(nVal) + Number(n2_);
+                if( String(res).length > String(n2_).length ) {
+                    res = Array.prototype.slice.call( String(res) );
+                    n3[nKey] = String(res.pop());
+                    res = res.length == 0 ? "" : res;
+                }
+                else
+                {
+                    n3[nKey] = String(res);
+                    res = "";
+                }
+            });
+
+            if( n1.length < n2.length ) {
+                var rn3 = String(n2.join("")).substr(n1.length);
+                rn3 = Array.prototype.slice.call( String(rn3) );
+
+                var res2 = res;
+                res = "";
+
+                if( res2.length )
+                    _z.for(rn3, function(nKey, nVal) {
+                        var n2_;
+                        // second hand value
+                        n2_ = ( nKey < res2.length ) ? res2[nKey] : "0";
+
+                        res = (res===""?0:Number(res.join(""))) + Number(nVal) + Number(n2_);
+                        if( String(res).length > String(n2_).length ) {
+                            res = Array.prototype.slice.call( String(res) );
+                            n3[nKey] = String(res.pop());
+                            res = res.length == 0 ? "" : res;
+                        }
+                        else
+                        {
+                            n3[nKey] = String(res);
+                            res = "";
+                        }
+                    });
+
+                n3.add(rn3);
+            }
+
+            if( res !== "" ) {
+                n3.add( res );
+                res = "";
+            }
+
+            n3 = n3.length ? n3.reverse().join("") : "0";
+
+            return n3;
+        };
+    }
+window.Num = Num;
 // Function.callSelf(args) = Function.apply( Function, args )
 if(typeof Function.prototype.callSelf !== 'function')
     Function.prototype.callSelf = function( args ) { args = args || [];
@@ -119,23 +198,35 @@ if(typeof Array.prototype.remove !== 'function')
 if(typeof Number.prototype.plus !== 'function')
     // 9999999999999998// 9999999999999998
     Number.prototype.plus= function(num){
-        if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
-            var data2 = String(this).substr(-5);
-            var data1 = String(this).substr(0, String(this).length - 5);
-            var nW = "";
-            for(var n_ = 0; n_ < data2.length; n_++) {
-                if(data2.substr(n_, 1) == "0")
-                    nW += "0";
-                else
-                    break;
+		if( !this.length ) return String(num);
+        var nW = "";
+        for(var n_ = this.length -1 ; n_ > 0; n_--) {
+            if(this[n_] == "9")
+            	nW = this[n_] + nW;
+            else {
+                nW = nW != "" ? String(this[n_]) + String(nW) : String(this[n_]);
+                break;
             }
-            if( nW.length )
-            	data2 = data2.substr(nW.length, data2.length -nW.length);
-
-            var r = Number(data2) + Number(num);
-            return String(data1) + String(nW) + String(r);
         }
-        return Number(this) + Number(num);
+        return String(this.substr(0, n_)) + String( Number(nW) + Number(num) );
+
+        // if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
+        //     var data2 = String(this).substr(-13);
+        //     var data1 = String(this).substr(0, String(this).length - 13);
+        //     var nW = "";
+        //     for(var n_ = 0; n_ < data2.length; n_++) {
+        //         if(data2.substr(n_, 1) == "0")
+        //             nW += "0";
+        //         else
+        //             break;
+        //     }
+        //     if( nW.length )
+        //     	data2 = data2.substr(nW.length, data2.length -nW.length);
+        //
+        //     var r = Number(data2) + Number(num);
+        //     return String(data1) + String(nW) + String(r);
+        // }
+        // return Number(this) + Number(num);
     };
 
 // String Number.minus( number ) = -1 to large number
@@ -2888,8 +2979,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		// show element
 		show: function show( elm, displayStyle ) {
-			var displayStyle = fns.turn( displayStyle, elm );
-			var elm = elm || this;
+			var displayStyle = fns.turn( displayStyle, (is_z(elm) ? false : elm) );
+			var elm = (is_z(elm) ? elm : this) || false;
 			// var elm = fns._zturn( this, elm );
 			if( !_z.isDOM( elm ) && !elm.len && !elm.length )
 				return false;
@@ -2907,9 +2998,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		// toggle show/hide
 		toggle: function toggle( elm, displayStyle ) {
+            var displayStyle = fns.turn( displayStyle, (is_z(elm) ? 'toggle' : elm) );
+            var elm = (is_z(elm) ? elm : this) || false;
 			// var elm = fns._zturn( this, elm ),
-			var elm = elm || this,
-				displayStyle = displayStyle || 'toggle';
+
 			if( !_z.isDOM( elm ) && !elm.len && !elm.length )
 				return this;
 			
