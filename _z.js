@@ -6643,9 +6643,9 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 								this.trigger( event );
 					}
 				};
-			}),
-        {
-        // mouse hover
+			}), {
+
+			// mouse hover
             hover: function hover(enterCB, outCB) {
                 if( !arguments.length )
                     return this.trigger("mouseenter mouseleave");
