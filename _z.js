@@ -1276,8 +1276,8 @@ var
 					{
 						selfFnd = this['o']['self'];
 						this['o']['arguments'].unshift( selfFnd );
-						
-						if( this['o']['arg'].length && selfFnd.equalsAll( _z( this['o']['arg'].slice(-1).pop() ) ) )
+
+						if( this['o']['arg'].length && selfFnd.equalsAll( this['o']['arg'].slice(-1).pop() ) )
 							this['o']['arg'].pop() && this['o']['arguments'].shift();
 					}
 					
@@ -1713,7 +1713,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			return arguments[0];
 
 		// check if the argument is function to try to execute it
-		if( arguments[0] && _z.isFunction(arguments[0]) ) {
+		if( arguments[0] && _z.isFunction(arguments[0]) && !is_z(arguments[0]) ) {
 			if( $this.execFunctions || $this.$.execFunctions || false ) {
 			    if( _z.document.isReady() )
 			        return arguments[0].call(doc, arguments[0]);
@@ -2998,7 +2998,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		// toggle show/hide
 		toggle: function toggle( elm, displayStyle ) {
-            var displayStyle = fns.turn( displayStyle, (is_z(elm) ? 'toggle' : elm) );
+            var displayStyle = fns.turn( displayStyle, (is_z(elm) ? 'toggle' : elm) || 'toggle' );
             var elm = (is_z(elm) ? elm : this) || false;
 			// var elm = fns._zturn( this, elm ),
 
@@ -3072,11 +3072,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				topOfElement = elm;
 				elm = undefined;
 			}
-			
-			var scroller = isset( this['underZ'], this['element'] ) ? 
-								this.filter($e=>(_z($e).isShow()&&_z.isDOM($e))).element(0) : 
+
+			var scroller = isset( this['underZ'], this['element'] ) && !_z.isWindow(this)?
+								this.filter( ($e)=>(_z($e).isShow()&&_z.isDOM($e)) ).element(0) :
 									window;
-			
+
 			if( isset( elm ) && !!!_z( elm ).isDOMElement(true) && !!!_z.isNumber( elm ) )
 				return isset( this['underZ'], this['element'] ) ? this : _z( scroller );
 			
@@ -3098,7 +3098,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 					_z.isFunction( (scrollIntoView = _z(scroller).prop('scrollIntoView')) )
 				) return scrollIntoView.call( scroller ), _z( scroller );
 				
-				var $returnTester = elm.rect('top');
+				var $returnTester = isset(elm) ? elm.rect('top') : 1;
 				if( (topOfElement = topOfElement || $returnTester)==$returnTester ) $return = _z( elm.element(0) );
 				
 				$returnTester = _z(scroller).rect('top');
@@ -3109,19 +3109,21 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 					
 				if( _z.isNumber(topOfElement) )
 				{
+                    // elm =  elm ||
 					if( _z.isWindow(scroller) )
 						return scroller.scroll(0, topOfElement), 
-								$return || _z( scroller );
-					else if( isset(scroller['scrollTop']) && elm )
-						return scroller['scrollTop'] = (
-										(topOfElement + (Number(_z(scroller).scrollTop()) || 0)) - 
-										(Number(_z(scroller).rect('top')) || 0)
-									) || topOfElement, 
 								$return || _z( scroller );
 					else if( isset(scroller['scrollTop']) && !!!elm )
 						return scroller['scrollTop'] = topOfElement || 0, 
 								$return || _z( scroller );
-				}
+                    else if( isset(scroller['scrollTop']) )
+                        return scroller['scrollTop'] = (
+                            (topOfElement + (Number(_z(scroller).scrollTop()) || 0)) -
+                            (Number(_z(scroller).rect('top')) || 0)
+                        ) || topOfElement,
+                        $return || _z( scroller );
+
+                }
 				else
 				{
 					console.error('elm not found', [ scroller, elm, topOfElement ]);
@@ -3165,6 +3167,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	
 	// for _z
 	var __zGlobalFunctions = [ {
+        // scroll To element
+        scrollTo: __zElementsFunctions.scrollTo,
+
 		// String.trim
 		trim: function trimString( str ) {
 			var tunning = fns.turny({
