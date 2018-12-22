@@ -1765,7 +1765,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		'WeakMap', 
 		'Map',
 		'NodeList',
-		'Boolean'
+		'Boolean',
+		'Null',
+		'Undefined'
 	].forEach(function( name ) {
 		// do not override// if( isset( _z['is' + name] ) && !override )// return;
 		if( !isset( _z['is' + name] ) )
@@ -2137,7 +2139,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		// if notification blocked try to grant permission
 		if( !!!this.status && !!!this.blocked )
-			return this.request( ()=> new notificationModule( ...(arguments||[]) ) );
+			return this.request( ()=> new Notifications( ...(arguments||[]) ) );
 		
 		options2 = options2 || {};
 		options = options || "DefaultTag";
@@ -3344,7 +3346,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
-        // execute <script>
+        // execute codes in HTMLDOM, exec src or innertext
         execScript: function execScript( e ) {
             if( !e ) return false;
 
@@ -3423,7 +3425,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		rnd: function( start, end ) {
 			if( arguments.length > 2 || (start&&!_z.isNumber(start)) || (end&&!_z.isNumber(end)) )
 				return arguments[ _z.rnd( arguments.length-1 ) ];
-				
+
+			if( _z.isNull(end) )
+			    end = Number.MAX_SAFE_INTEGER;
+
 			if( !!!end )
 				end = start,
 				start = 0;
@@ -3437,7 +3442,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // argument to array
         Array: function Array( input ) {
             input = input || [];
-            if( _z.isString(input) || _z.isNumber(input) )
+            if( _z.isString(input) )
                 input = [ input ];
             return _z.toArray(input);
         },
@@ -3503,51 +3508,26 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				i = 0,
 				length = obj.length,
 				isArray = _z.isTypes( [], obj );
-			
-			if( args )
-			{
-				if( isArray )
-				{
-					for (; i < length; i++ )
-					{
-						value = callback.apply( obj[ i ], args );
 
-						if( value === false )
-							break;
-					}
-				}
-				else
-				{
-					for( i in obj )
-					{
-						value = callback.apply( obj[ i ], args );
-						if( value === false )
-							break;
-					}
-				}
 
-			}
-			else
-			{ // A special, fast, case for the most common use of each
-				if( isArray )
-				{
-					for(; i < length; i++ )
-					{
-						value = callback.call( obj[ i ], i, obj[ i ] );
-						if( value === false )
-							break;
-					}
-				}
-				else
-				{
-					for( i in obj )
-					{
-						value = callback.call( obj[ i ], i, obj[ i ] );
-						if( value === false )
-							break;
-					}
-				}
-			}
+            if( isArray )
+            {
+                for (; i < length; i++ )
+                {
+                    value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
+                    if( value === false )
+                        break;
+                }
+            }
+            else
+            {
+                for( i in obj )
+                {
+                    value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
+                    if( value === false )
+                        break;
+                }
+            }
 
 			return obj;
 		},
