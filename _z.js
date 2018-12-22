@@ -3288,12 +3288,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				_z.cssRole['styleSheet'] = document.createElement('style');
 				document.head.appendChild( _z.cssRole['styleSheet'] );
 			}
-			if( arguments.length == 0 ) return _z.cssRole['styleSheet'];
+			if( arguments.length == 0 ) return this;//_z.cssRole['styleSheet'];
 			
 			var styleSheet = _z.cssRole['styleSheet']['sheet'];
 			styleSheet.insertRule( c, 0 );
 			
-			return _z.cssRole['styleSheet']; //this;
+			return this;
 		},
 		
 	}, {
