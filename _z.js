@@ -3293,7 +3293,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			var styleSheet = _z.cssRole['styleSheet']['sheet'];
 			styleSheet.insertRule( c, 0 );
 			
-			return this;
+			return _z.cssRole['styleSheet']; //this;
 		},
 		
 	}, {
