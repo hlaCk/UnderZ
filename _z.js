@@ -1741,7 +1741,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	_z.extend = extendFunction;
 	_z.cloneFunction = cloneFunction;
 	_z.mix = mix;
+	// engine id
 	_z._counter = 0;
+	// functions guid
+	_z._fguid = 0;
 	// internal data
 	_z._data = {};
 	
@@ -3288,10 +3291,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				_z.cssRole['styleSheet'] = document.createElement('style');
 				document.head.appendChild( _z.cssRole['styleSheet'] );
 			}
-			if( arguments.length == 0 ) return _z.cssRole['styleSheet'];
+			if( arguments.length == 0 ) return this;//_z.cssRole['styleSheet'];
 			
 			var styleSheet = _z.cssRole['styleSheet']['sheet'];
-			styleSheet.insertRule( c, 0 );
+			
+			c = _z.isArray(c) ? c : [c];
+			_z.for( c, (_IDc, _Vc)=>{
+				_Vc && styleSheet.insertRule( _Vc, 0 );
+			});
 			
 			return this;
 		},
@@ -3307,9 +3314,23 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // bind function
         proxy: function proxy( fn, fn2 ) {
-            if( _z.isFunction(fn) )
-                return fn.bind( fn2 );
-            else return fn;
+			if ( arguments.length > 1 && _z.isString(fn2) && isset(fn[ fn2 ]) ) {
+				_fn = fn[ fn2 ];
+				fn2 = fn;
+				fn = _fn;
+			}
+			
+            if( !_z.isFunction(fn) )
+				return fn;
+			
+			var args = protos.array.slice.call( arguments, 2 );
+			var $this = this;
+			function newProxy() {
+				return fn.apply( fn2 || $this, args.concat( protos.array.slice.call( arguments ) ) );
+			}
+			newProxy.guid = fn.guid = fn.guid || _z._fguid++;
+			
+			return newProxy;
         },
 
         // global eval
