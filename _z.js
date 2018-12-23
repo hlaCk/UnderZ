@@ -80,6 +80,70 @@
 
             return n3;
         };
+
+        // minus
+        _n.minus = function minus(n) {
+            var n1 = Array.from( this.value ).reverse(),
+                n2 = Array.prototype.slice.call( String(n) ).reverse(),
+                n3 = [];
+            var res = "";
+
+            _z.for(n1, function(nKey, nVal) {
+                var n2_;
+                // second hand value
+                n2_ = ( nKey < n2.length ) ? n2[nKey] : "0";
+
+                res = (res===""?0:Number(res.join(""))) + Number(nVal) + Number(n2_);
+                if( String(res).length > String(n2_).length ) {
+                    res = Array.prototype.slice.call( String(res) );
+                    n3[nKey] = String(res.pop());
+                    res = res.length == 0 ? "" : res;
+                }
+                else
+                {
+                    n3[nKey] = String(res);
+                    res = "";
+                }
+            });
+
+            if( n1.length < n2.length ) {
+                var rn3 = String(n2.join("")).substr(n1.length);
+                rn3 = Array.prototype.slice.call( String(rn3) );
+
+                var res2 = res;
+                res = "";
+
+                if( res2.length )
+                    _z.for(rn3, function(nKey, nVal) {
+                        var n2_;
+                        // second hand value
+                        n2_ = ( nKey < res2.length ) ? res2[nKey] : "0";
+
+                        res = (res===""?0:Number(res.join(""))) + Number(nVal) + Number(n2_);
+                        if( String(res).length > String(n2_).length ) {
+                            res = Array.prototype.slice.call( String(res) );
+                            n3[nKey] = String(res.pop());
+                            res = res.length == 0 ? "" : res;
+                        }
+                        else
+                        {
+                            n3[nKey] = String(res);
+                            res = "";
+                        }
+                    });
+
+                n3.add(rn3);
+            }
+
+            if( res !== "" ) {
+                n3.add( res );
+                res = "";
+            }
+
+            n3 = n3.length ? n3.reverse().join("") : "0";
+
+            return n3;
+        };
     }
 window.Num = Num;
 // Function.callSelf(args) = Function.apply( Function, args )
@@ -365,54 +429,62 @@ var
 	stopLoopinException = new Error("stopLoopinException"),
 	
 	// forEach
-	foreach = function foreach( obj, cb, context ) {
-		if( typeOfVar( obj ) == 'function' )
-		{
-			context = cb;
-			cb = obj;
-			obj = this['element']&&this.element() || [];
-		}
-		
-		obj = obj || false;
-		if( !!!obj || !!!cb || typeOfVar( cb ) != 'function' )
-			return false;
-		
-		obj = is_z( obj ) ? obj.element() : obj;
-		if( typeof stopLoopinException == "undefined" ) {
-			var stopLoopinException = new Error("stopLoopinException");
-		}
-		
-		var returns =
-					(
-						(typeOfVar( obj )==typeOfVar( [] )&&[])||
-						(typeOfVar( obj )==typeOfVar( {} )&&{})||
-						(_z['createAs']&&_z.createAs( obj ))
-					)||{};
-		
-		try {
-			var _keys = Object.keys( obj );
-			
-			for( var i = 0, l = _keys.length; i < l ; i++ )
-			{
-				var key = _keys[ i ];
-				
-				var cbReturn = cb.apply(context||obj, [ key, obj[ key ], obj]);
-				
-				if( !!!cbReturn && cbReturn != undefined )
-					throw stopLoopinException;
-				else if( cbReturn != undefined )
-					returns[ key ] = cbReturn;
-				else
-					returns[ key ] = obj[ key ];
-			}
-		}
-		catch(e)
-		{
-			if(e !== stopLoopinException) throw e;
-		}
-		
-		return returns;
-	},
+    foreach = function foreach( obj, cb, context ) {
+        if( _z.isFunction( obj ) ) {
+            if( cb ) context = cb;
+
+            cb = obj;
+            obj = this;
+        }
+
+        obj = obj || false;
+
+        if( !!!obj || !!!cb || !_z.isFunction( cb ) ) return false;
+
+        obj = is_z( obj ) ? obj.toArray() : obj;
+        if( typeof stopLoopinException == "undefined" )
+            var stopLoopinException = new Error("stopLoopinException");
+
+        var isArrayObj = _z.isArray(obj);
+        var returns = ( (isArrayObj&&[]) ||
+                        (_z.isObject( obj )&&{}) ||
+                        (_z['createAs']&&_z.createAs( obj ))
+                    ) || {};
+
+        try {
+            var cbReturn;
+
+            if( isArrayObj ) {
+                var i = 0,
+                    length = obj.length,
+                    newcontext = false;
+
+                for (; i < length; i++ ) {
+                    newcontext = context || obj[ i ];
+                    cbReturn = cb.call( newcontext ,  i, obj[ i ]);
+
+                    if( !!!cbReturn && cbReturn != undefined )
+                        throw stopLoopinException;
+                    else
+                        returns[ i ] = ( cbReturn != undefined ) ? cbReturn : obj[ i ];
+                }
+            } else {
+                for( var key in obj ) {
+                    newcontext = context || obj[ i ];
+                    cbReturn = cb.call( newcontext  ,  key, obj[ key ]/* , obj */);
+
+                    if( !!!cbReturn && cbReturn != undefined )
+                        throw stopLoopinException;
+                    else
+                        returns[ key ] = ( cbReturn != undefined ) ? cbReturn : obj[ key ];
+                }
+            }
+        } catch(e) {
+            if(e !== stopLoopinException) throw e;
+        }
+
+        return returns;
+    },
 	
 	// toArray
 	toArray = function toArray() {
@@ -3493,54 +3565,56 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		},
 
 		// forEach
-		each: function each( obj, callback, args ) {
-			if( _z.isTypes(Function, obj) )
-			{
-				if( callback )
-					args = callback;
-				
-				callback = obj;
-				obj = this.toArray();
-			}
-			
-			var obj = obj || [],
-				value,
-				i = 0,
-				length = obj.length,
-				isArray = _z.isTypes( [], obj );
+        each: function each( obj, callback, args ) {
+            if( _z.isFunction( obj ) ) {
+                if( callback ) args = callback;
 
-
-            if( isArray )
-            {
-                for (; i < length; i++ )
-                {
-                    value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
-                    if( value === false )
-                        break;
-                }
-            }
-            else
-            {
-                for( i in obj )
-                {
-                    value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
-                    if( value === false )
-                        break;
-                }
+                callback = obj;
+                obj = this;
             }
 
-			return obj;
-		},
+            obj = obj || false;
+            args = args || false;
+
+            if( !!!obj || !!!callback || !_z.isFunction( callback ) ) return false;
+
+            obj = is_z( obj ) ? obj.toArray() : obj;
+            var isArrayObj = _z.isArray(obj);
+
+            try {
+                var value;
+
+                if( isArrayObj ) {
+                    var i = 0,
+                        length = obj.length;
+
+                    for (; i < length; i++ ) {
+                        value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
+                        if( value === false ) break;
+                    }
+                } else {
+                    for( var i in obj ) {
+                        value = args ? callback.apply( obj[ i ], args ) : callback.call( obj[ i ], i, obj[ i ] );
+                        if( value === false ) break;
+                    }
+                }
+            } catch(e) {
+
+            }
+
+            return obj;
+        },
 
 		// foreach( Object|Array, function ), when function return false will break the loop
 		for: foreach,
 		
 		// array map
 		map: function map( array, func ) {
-			if( _z.isTypes( Function, array ) && !!!func )
-			{
+			var mapElements = false;
+		    if( _z.isTypes( Function, array ) && !!!func ) {
 				func = array;
 				array = this['element']&&this.element() || [];
+                mapElements = true;
 			}
 			
 			if( _z.type( array ) != "Array" )
@@ -3555,11 +3629,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				result.push( func.apply( array[i], [array[i], i, array] ) );
 				// result[ i ] = func( array[i], i );
 			}
-			
-			// for( var result = [], i=0; i < array.length; ++i ) {
-				// result.push( func.apply( array[i], [array[i], i, array] ) );
-			// }
-			return array = null, result;
+
+            array = null;
+
+			return mapElements ? this.newSelector( result ) : result;
 		},
 	};
 	
