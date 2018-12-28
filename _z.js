@@ -1,4 +1,4 @@
-// UnderZ 0.0.9 Beta 1 - JavaScript Library
+// UnderZ 1.0.0 - JavaScript Library
 // Copyright © 2008-2017 hlaCk (https://github.com/hlaCk)
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
@@ -196,7 +196,7 @@ var
 	globaljQuery = window["jQuery"] || new Function("return false"),
 
 	// engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
-	version = '0.0.9 b-1',
+	version = '1.0.0',
 	
 	// prototypes of objects - public var in _z.privates.protos
 	protos = {
