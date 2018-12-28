@@ -9,6 +9,35 @@ if(typeof Function.prototype.callSelf !== 'function')
         return this.apply( this, args );
     };
 
+// Object.each(function) = Object
+if(typeof Object.prototype.each !== 'function')
+    Object.prototype.each = function( cb ) {
+        cb = cb || false;
+        if( !_z.isFunction(cb) ) return this;
+
+        if( _z&&_z["for2"] ) {
+            var nO = _z.for(this, cb);
+            if( _z.isObject(nO) )
+                Object.assign(this, nO);
+        } else {
+            try {
+                var _keys = Object.keys( this );
+                for( var i = 0, l = _keys.length; i < l ; i++ ) {
+                    var cbReturn = cb.apply(this, [ _keys[i], this[ _keys[i] ], this]);
+
+                    if( cbReturn === false )
+                        break;
+                    else if( cbReturn != undefined )
+                        this[ _keys[i] ] = cbReturn;
+                }
+            } catch(e) {
+                throw e;
+            }
+        }
+
+        return this;
+    };
+
 // Function.bindSelf(args) = Function.bind( Function, args )
 if(typeof Function.prototype.bindSelf !== 'function')
     Function.prototype.bindSelf = function( args ) { args = args || [];
@@ -23,9 +52,9 @@ if(typeof Array.prototype.pushSetter !== 'function')
 if(typeof String.prototype.replaceArray !== 'function')
 	String.prototype.replaceArray = function(find, replace) {
 		var replaceString = this;
-		for (var i = 0; i < find.length; i++) {
-			replaceString = replaceString.replace(find[i], replace[i]);
-		}
+		for (var i = 0, fL = find.length; i < fL; i++)
+		    replaceString = replaceString.replace(find[i], replace[i]);
+
 		return replaceString;
 	};
 
@@ -60,9 +89,9 @@ if(typeof Array.prototype.unique !== 'function')
 		for(var i = 0, l = this.length; i < l; ++i){
 			var currentKeyElement = this[i];
 			currentKey = keyUnique !== null ? this[keyUnique] : currentKeyElement;
-			if(u.hasOwnProperty(currentKey)) {
-				continue;
-			}
+
+			if( u.hasOwnProperty(currentKey) ) continue;
+
 			a.push(currentKeyElement);
 			u[currentKey] = 1;
 		}
@@ -87,14 +116,13 @@ if(typeof Array.prototype.add !== 'function') {
 if(typeof Array.prototype.inArray !== 'function')
 	Array.prototype.inArray = function(needle, haystack) {
 		var haystack = haystack || this;
-		if(typeof(haystack) != typeof([]))
-			return -1;
+		if( typeof(haystack) != typeof([]) ) return -1;
 		
 		var length = haystack.length;
-		for(var i = 0; i < length; i++) {
-			if(haystack[i] == needle) 
-				return haystack.indexOf(needle)?haystack.indexOf(needle):0;
-		}
+		for(var i = 0; i < length; i++)
+		    if(haystack[i] == needle)
+				return haystack.indexOf(needle) ? haystack.indexOf(needle) : 0;
+
 		return -1;
 	};
 
@@ -102,17 +130,33 @@ if(typeof Array.prototype.inArray !== 'function')
 if(typeof Array.prototype.remove !== 'function')
 	// Array Remove - By John Resig (MIT Licensed)
 	Array.prototype.remove = function(from, to) {
-		if( from && typeof(from)==typeof('hlack'))
-			from = this.indexOf( from );
+		if( arguments.length > 0 )
+			from = typeof(from)==typeof(7) ? from : this.indexOf( from );
 		
-		if( to && typeof(to)==typeof('hlack'))
-			to = this.indexOf( to );
-		if( !!!from && !!!to )
+		if( arguments.length > 1 )
+			to = typeof(to)==typeof(6) ? to : this.indexOf( to );
+
+		from = from === -1 ? false : from;
+		to = to === -1 ? false : to;
+		if( (!!!from && typeof(from)!=typeof(4)) && (!!!to && typeof(to)!=typeof(5)) )
 			return this;
 		
 		var rest = this.slice((to || from) + 1 || this.length);
 		this.length = from < 0 ? this.length + from : from;
+
 		return this.push.apply(this, rest);
+	};
+
+// Array Array.removeAll(val) = remove vars by value
+if(typeof Array.prototype.removeAll !== 'function')
+	Array.prototype.removeAll = function(val) {
+		if( this.indexOf(val) === -1 )
+			return this;
+
+        while( this.indexOf(val) !== -1 )
+		    this.remove(val);
+
+		return this;
 	};
 
 // String Number.plus( number ) = +1 to large number
@@ -177,6 +221,7 @@ if(typeof Number.prototype.minus !== 'function')
 // String String.plus( number ) = +1 to large number
 if(typeof String.prototype.minus !== 'function')
     String.prototype.minus = Number.prototype.minus;
+
 // String String.minus( number ) = -1 to large number
 if(typeof String.prototype.plus !== 'function')
     String.prototype.plus = Number.prototype.plus;
@@ -203,7 +248,6 @@ var
 		object: Object.prototype,
 		element: Element.prototype,
 		array: Array.prototype,
-		string: String.prototype,
 		likeArray: {
 			push: [].push,
 			sort: [].sort,
@@ -235,26 +279,37 @@ var
 	// isset `val` - public function in _z.isset(var) = true|false
 	isset = function isset( val ) {
 		if( arguments.length > 1 )
-			for(var i=0,i2=arguments.length; i<i2;i++)
+			for(var i=0, i2=arguments.length; i<i2; i++ )
 				if( !!!isset(arguments[i]) ) return false;
 
 		return val !== void 0 || typeof(val) !== 'undefined';
 	},
 	
 	// trim prototype - public function in _z.trim( String ) = trimmed String
-	triming = (protos.string.trim&&protos.string.trim || function trimString(str) {
+	triming = (String.prototype.trim&&String.prototype.trim || function trimString(str) {
 		return (str||this).replace(/^\s+/, '').replace(/\s+$/, '');
 	}),
 	
 	// type of `val` as string toLowerCase
-	typeOfVar = TOV = function type( val ) {
-		return Object.prototype.toString.call( val ).replace(/^\[object (.+)\]$/, '$1').trim().toLowerCase();
-	},
-	
+	TOV = function typeOfVar( val ) {
+        return protos.object.toString.call( val ).replaceArray( ['[object ', ']'], ['', ''] ).trim();
+    },
+
+	typeOfVar = function type( val ) { return TOV( val ).toLowerCase(); },
+
+    // to avoid calling twice typeOfVar
+    varsType = {
+        "n": "number",
+        "s": "string",
+        "a": "array",
+        "o": "object",
+        "f": "function",
+        "b": "boolean",
+    },
+
 	// toLowerCase
 	toLC = function( $var, $reDefine ) {
-		if( typeOfVar($var)=='array' )
-		{
+		if( typeOfVar($var)==varsType.a ) {
 			if( !isset($reDefine) )
 				$var2 = Array.from($var),
 				$var = $var2;
@@ -268,7 +323,7 @@ var
 	},
 	// toUpperCase
 	toUC = function( $var, $reDefine ) {
-		if( typeOfVar($var)=='array' )
+		if( typeOfVar($var)==varsType.a )
 		{
 			if( !isset($reDefine) )
 				$var2 = Array.from($var),
@@ -287,7 +342,7 @@ var
 	
 	// forEach
 	foreach = function foreach( obj, cb, context ) {
-		if( typeOfVar( obj ) == 'function' )
+		if( typeOfVar( obj ) == varsType.f )
 		{
 			context = cb;
 			cb = obj;
@@ -295,7 +350,7 @@ var
 		}
 		
 		obj = obj || false;
-		if( !!!obj || !!!cb || typeOfVar( cb ) != 'function' )
+		if( !!!obj || !!!cb || typeOfVar( cb ) != varsType.f )
 			return false;
 		
 		obj = is_z( obj ) ? obj.element() : obj;
@@ -305,8 +360,8 @@ var
 		
 		var returns =
 					(
-						(typeOfVar( obj )==typeOfVar( [] )&&[])||
-						(typeOfVar( obj )==typeOfVar( {} )&&{})||
+						(typeOfVar( obj )==varsType.a&&[])||
+						(typeOfVar( obj )==varsType.o&&{})||
 						(_z['createAs']&&_z.createAs( obj ))
 					)||{};
 		
@@ -352,7 +407,7 @@ var
 	// subArray
 	subArray = function subArray( startFrom, endTo, array ) {
 		if( endTo&&!isset(array) )
-			if( typeOfVar(endTo)!=typeOfVar(7) )
+			if( typeOfVar(endTo)!=varsType.n )
 				array = endTo,
 				endTo = false;
 		var sliceit = [startFrom || 0];
@@ -409,37 +464,38 @@ var
 		else return _z( result );
 		// return filterElements ? _z( result ) : result;
 	},
-	
-	// vanillas shortcuts
+
+    // vanillas shortcuts
 	vanilla = function getVanillas( $var ) {
-		var _vanilla = {
-				vanilla: true,
-				window: window,
-				document: doc,
-				body: doc.body,
-				root: doc.getRootNode.bind(doc),
-				head: doc.head,
-				title: doc.title,
-				
-				compStyle: (window.getComputedStyle || getComputedStyle),
-				
-				byID: doc.getElementById.bind(doc),
-				byClass: doc.getElementsByClassName.bind(doc),
-				byName: doc.getElementsByName.bind(doc),
-				byTag: doc.getElementsByTagName.bind(doc),
-				
-				w: doc.write.bind(doc),
-				wln: doc.writeln.bind(doc),
-				
-				qsa: doc.querySelectorAll.bind(doc),
-				qs: doc.querySelector.bind(doc),
-				
-				elm: doc.createElement.bind(doc),
-				attr: doc.createAttribute.bind(doc),
-				comment: doc.createComment.bind(doc),
-			};
 		return ( isset($var) ? _vanilla[ $var ] : _vanilla);
 	},
+
+    _vanilla = {
+        vanilla: vanilla,
+        window: window,
+        document: doc,
+        body: doc.body,
+        root: doc.getRootNode.bind(doc),
+        head: doc.head,
+        title: doc.title,
+
+        compStyle: (window.getComputedStyle || getComputedStyle),
+
+        byID: doc.getElementById.bind(doc),
+        byClass: doc.getElementsByClassName.bind(doc),
+        byName: doc.getElementsByName.bind(doc),
+        byTag: doc.getElementsByTagName.bind(doc),
+
+        w: doc.write.bind(doc),
+        wln: doc.writeln.bind(doc),
+
+        qsa: doc.querySelectorAll.bind(doc),
+        qs: doc.querySelector.bind(doc),
+
+        elm: doc.createElement.bind(doc),
+        attr: doc.createAttribute.bind(doc),
+        comment: doc.createComment.bind(doc),
+    },
 
     // clone object
     cloneObj = function cloneObj( obj ) {
@@ -507,13 +563,13 @@ var
             var $return = [];
             if( arguments.length )
             {
-                $elm = _z( typeOfVar($elm)==='string' ? [ $elm ] : $elm );
+                $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
 
                 elmFunc.elmLoop( elm, function( e ) {
                     var $currentElement = [];
                     elmFunc.elmLoop( _z( $elm ), function( e2 ) {
 
-                        if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))=='string' )
+                        if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))==varsType.s )
                             $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
                         else
                             $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
@@ -763,7 +819,7 @@ var
 			return $return||false;
 		},
 		add: function addRegisteredEvents( e, eventName, qselector, _callback, callback, element ) {
-			var data = arguments.length==1&&typeOfVar(e)=='object' ? e : false;
+			var data = arguments.length==1&&typeOfVar(e)==varsType.o ? e : false;
 			if( data )
 				e = data['element'] || false;
 			
@@ -950,26 +1006,7 @@ var
 			return decodeURIComponent( escape( base64.atob( code ) ) );
 		},
 	},
-		
-	// get var by refrance
-	byRef = function byRef( varName ) {
-		try{
-			if( !_z.isString(varName) )
-				fns.t.t( 'First argument Is NOT a Variable Name !!!' );
-			
-			return eval(
-					"try { "+
-						"try { "+varName+" = "+varName+"; } catch(e1) { "+varName+" = undefined; } " + 
-						"({get value(){return "+varName+";}, set value(v){"+varName+"=v;}, get refrance() { return `"+varName+"`; } })" +
-					" } catch(e2) { } "
-				);
-		}
-		catch(e)
-		{
-			throw !( e instanceof Error ) ? new Error(e) : e;
-		}
-	},
-	
+
 	// functions ( shortcuts )
 	fns = {
 		registeredEvents: registeredEvents,
@@ -989,8 +1026,10 @@ var
 		wrn: function consoleWarn() { console.warn.apply(console, arguments) },
 		dir: function consoleDir() { console.dir.apply(console, arguments) },
 		info: function consoleDir() { console.info.apply(console, arguments) },
-		
+
+        toLowerCase: toLC,
 		toLC: toLC,
+        toUpperCase: toUC,
 		toUC: toUC,
 		objectProp: protos.objectProp,
 		objProp: function objProp( obj, ps ) {
@@ -999,7 +1038,7 @@ var
 			newProping['enumerable'] = ps['e']!==undefined ? !!ps['e'] : true;
 			newProping['configurable'] = ps['c']!==undefined ? !!ps['c'] : true;
 			newProping['writable'] = ps['w']!==undefined ? !!ps['w'] : true;
-			newProping['add'] = ps['add']!==undefined && typeOfVar( ps['add'] )==typeOfVar( [] ) ? ps['add'] : false;
+			newProping['add'] = ps['add']!==undefined && typeOfVar( ps['add'] )==varsType.a ? ps['add'] : false;
 			newProping['skip'] = ps['skip']!==undefined ? !!ps['skip'] : false;
 			
 			if( newProping['add'] )
@@ -1070,8 +1109,10 @@ var
 		},
 		
 		// current timestamp
-		time: function time() {
-			return ( new Date() ).getTime();
+		time: function time(c) {
+		    c = c || false;
+		    var t = new Date();
+			return c===false ? t.getTime() : (c == 's' ? t.getSeconds() : (c == 'm' ? t.getMinutes() : (c == 'h' ? t.getHours() : t)));
 		},
 
         // eval
@@ -1134,10 +1175,8 @@ var
 			return $return;
 		},
 	
-		br: byRef,
-		byRef: byRef,
-		
-		// throw functions
+
+        // throw functions
 		t: {
 			// throw new error
 			e: function() { throw new Error( ...arguments ); },
@@ -1177,7 +1216,7 @@ var
 				anyQuery['end'] = anyQuery['passed'] && o == 'end' || false;
 				anyQuery['last'] = anyQuery['passed'] && o == 'last' || false;
 				anyQuery['self'] = anyQuery['passed'] && o == 'self' || false;
-				anyQuery['arguments'] = anyQuery['passed'] && (o == 'arguments' && this['o']['arg'] || typeOfVar(o)=='number'&&this['o']['arg'][ o ]) || false;
+				anyQuery['arguments'] = anyQuery['passed'] && (o == 'arguments' && this['o']['arg'] || typeOfVar(o)==varsType.n&&this['o']['arg'][ o ]) || false;
 				anyQuery['isset'] = anyQuery['passed'] && (anyQuery['last'] || anyQuery['self'] || anyQuery['arguments'] || anyQuery['end']) && true || false;
 				
 				if( anyQuery['passed'] && !anyQuery['end'] )
@@ -1390,7 +1429,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
 	// register global variables
 	window.fns = window.fns || fns;
-	window.byRef = window.byRef || fns.byRef;
 	window.Math.__random = isset(window.Math['__random']) ? window.Math['__random'] : window.Math['random'];
 	window.Math.random = function() { return arguments.length ? _z.rnd( ...arguments ) : window.Math['__random'](); };
 	// register global variables
@@ -1536,7 +1574,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			length = arguments.length,
 			args = arguments;
 		
-		if( typeOfVar( args[0] ) === 'boolean' ) {
+		if( typeOfVar( args[0] ) === varsType.b ) {
 			deep = args[ idx++ ];
 			extended = args[ idx ] || extended;
 		}
@@ -1546,7 +1584,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			extended = this;
 		
 		// extend as ArrayLike
-		if( typeOfVar( args[0] )==typeOfVar( [] ) && Object.keys(extended).length === 0)
+		if( typeOfVar( args[0] )==varsType.a && Object.keys(extended).length === 0)
 			extended = [];
 		
 		// Merge the object into the extended object
@@ -1560,11 +1598,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				
 				if( hasProp( obj, prop ) )//&& !(obj[prop] && extended[prop] && obj[prop] === extended[prop]))
 					// If deep merge and property is an object, merge properties
-					if( deep && typeOfVar( obj[prop] ) === 'object' ) {
-						extended[prop] = extend( true, extended[ prop ], obj[ prop ] );
-					} else {
-						extended[prop] = obj[prop];
-					}
+					if( deep && typeOfVar( obj[prop] ) === varsType.o )
+					    extended[prop] = extend( true, extended[ prop ], obj[ prop ] );
+                    else
+				        extended[prop] = obj[prop];
 			}
 		};
 
@@ -1600,18 +1637,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		return newObj;
 	};
 
-	// create copy of functions
-	var cloneFunction = function cloneFunction( obj, copy ) {
-		if( typeOfVar( obj ) !== 'function' )
-			return extendFunction( true, copy, obj );
-
-		copy = typeOfVar( obj ) === 'function' && (copy = obj) && obj.bind( copy ) || false;
-		if( _z.typeOfVar( obj ) !== 'function' || !!!copy ) return (copy = obj);
-
-		var _copy = Object.create( Object.getPrototypeOf( obj ), Object.getOwnPropertyDescriptors( obj ) );
-		return mix( copy, extendFunction( true, {}, _copy ) );
-	};
-	
 	/**
 	*	( _z.$ || _z ).extend.status = [ true | false ]
 	*	status of ( [ {}, {} ].extend )
@@ -1660,7 +1685,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	};
 
 	_z.extend = extendFunction;
-	_z.cloneFunction = cloneFunction;
 	_z.mix = mix;
 	// engine id
 	_z._counter = 0;
@@ -1693,12 +1717,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		// do not override// if( isset( _z['is' + name] ) && !override )// return;
 		if( !isset( _z['is' + name] ) )
 			_z['is' + name] = function(obj) {
-				return toLC( typeOfVar( obj ) ) == toLC( name );
-			}; 
+				return typeOfVar( obj ) == toLC( name );
+				// return toLC( typeOfVar( obj ) ) == toLC( name );
+			};
 	});
 
 	// do not return if NaN #fix
-	_z.isNumber = function isNumber(n) { return typeOfVar( n ) == typeOfVar( 1 ) && !isNaN(n); };
+	_z.isNumber = function isNumber(n) { return typeOfVar( n ) == varsType.n && !isNaN(n); };
 	//toString.call(obj) == '[object ' + name + ']';
 	
 	// attach Promiser module to engine
@@ -1966,7 +1991,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			try {
 				(aE=toArray( anElements )) && ( anElements = aE);
 			} catch ( err ) { }
-			( $anElements=this.element() ).push( ...( typeOfVar( anElements )=='array' ? anElements : [anElements] ) );
+			( $anElements=this.element() ).push( ...( typeOfVar( anElements )==varsType.a ? anElements : [anElements] ) );
 
 			return this.newSelector( $anElements );
 		},
@@ -1976,7 +2001,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			try {
 				(aE=toArray( anElements )) && ( anElements = aE);
 			} catch ( err ) { }
-			( $anElements=this.element() ).push( ...( typeOfVar( anElements )=='array' ? anElements : [anElements] ) );
+			( $anElements=this.element() ).push( ...( typeOfVar( anElements )==varsType.a ? anElements : [anElements] ) );
 
             this.update( $anElements );
             return this;
@@ -2389,44 +2414,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			
 			return attrValueExist ? this  : "";
 		},
-		
-		/* function fullPath(el, limit){ limit = Number(limit) || false;
-  var names = [];
-  while (el.parentNode){
-	var fResult = false;
-	
-    if (el.id){
-		fResult = true;
-      names.unshift("[id='"+el.id+"']");
-      // break;
-    }else{
-      if (el==el.ownerDocument.documentElement) names.unshift(el.tagName);
-      else{
-        for (var c=1,e=el;e.previousElementSibling;e=e.previousElementSibling,c++);
-        console.log(e),
-		console.warn(fullPath(e,1));
-        // names.unshift(fullPath(e,1));
-        // names.unshift(el.tagName+fullPath(el);
-      }
-    }
-	
-	if(el.className)
-	{
-		fResult = true;
-		names[0] += '.'+el.className.split(' ').join('.');
-	}
-	if( fResult === false && el.tagName)
-		names.unshift(el.tagName);
-	
-	el=el.parentNode;
-	
-	if(limit !=false && names.length>=limit)
-		break;
-  }
-  
-  return names.join(" ");
-} */
-		// get all attributes
+
+        // get all attributes
 		attrs: function getAllElementAttributes() {
 			var idxOF = "",
 				deleteAttr = -1,
@@ -3483,9 +3472,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			return array = null, result;
 		},
 	};
-	
-	
-		
+
 	// serialize data options
 	var __zSerializeSettings = {
 		// global serialize settings
@@ -3573,269 +3560,196 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
     };
 
-    // deferring system
-	var __zDeferring = {
-		vars: [],
-		backcallbacks: {
-			f_asap: [],
-			f_ready: [],
-		},
-		
-		callbacks: {
-			f_asap: [],
-			f_ready: [],
-			
-			asap: function(f, promise, unique) { 
-				var f=f||false,
-					promise=promise||false,
-					unique=unique||false;
-				if(!f)
-					return false;
-				
-				var pushIdx=false;
-				if(promise)
-					$( document ).promise().done(function() {
-						var dof=_z.callbacks.asap(f,false,unique);
-						return unique?dof.unique():false;
-					});
-				else
-					pushIdx = _z.callbacks.f_asap.push(f);
-				
-				var retObj = {
-					idx: pushIdx?--pushIdx:false,
-					func: promise?false:f,
-					unique: function() { 
-						if(promise || this.func==false)
-							return this;
-						
-						if(_z.callbacks.f_asap.length<=1)
-							return this;
-						
-						var uFunc = _z.callbacks.f_asap[this.idx];
-						if(!uFunc)
-							return this;
-						
-						_z.callbacks.f_asap.remove(this.idx);
-						
-						for(var findr in _z.callbacks.f_asap)
-							if(findr in _z.callbacks.f_asap)
-							if(_z.callbacks.f_asap[findr]==uFunc || _z.inArray(uFunc, _z.callbacks.f_asap)!=-1 || _z.callbacks.f_asap[findr].toString()==uFunc.toString())
-								return logy(['duplicate function',uFunc]),false;
-							
-						_z.callbacks.f_asap.push(uFunc);
-						return this;
-					}
-				};
-				
-				return unique?retObj.unique():retObj;
-			},
-			ready: function(f, promise, unique) { 
-				var f=f||false,
-					promise=typeOfVar(promise)!='undefined'?promise:true,
-					unique=typeOfVar(unique)!='undefined'?unique:true;
-				
-				if(!f)
-					return false;
-				
-				var pushIdx=false;
-				if(promise)
-					$( document ).promise().done(function() {
-						var dof=_z.callbacks.ready(f,false,unique);
-						
-						return unique?dof.unique():false;
-					});
-				else
-					pushIdx = _z.callbacks.f_ready.push(f);
-				
-				var retObj = {
-					idx: pushIdx?--pushIdx:false,
-					func: promise?false:f,
-					unique: function() { 
-						if(promise || this.func==false)
-							return this;
-						
-						if(_z.callbacks.f_ready.length<=1)
-							return this;
-						
-						var uFunc = _z.callbacks.f_ready[this.idx];
-						if(!uFunc)
-							return this;
-						
-						_z.callbacks.f_ready.remove(this.idx);
-						
-						for(var findr in _z.callbacks.f_ready)
-							if(findr in _z.callbacks.f_ready)
-							{
-								if(_z.callbacks.f_ready[findr]==uFunc || _z.inArray(uFunc, _z.callbacks.f_ready)!=-1 || _z.callbacks.f_ready[findr].toString()==uFunc.toString())
-									return logy(['duplicate function',uFunc]),this;
-							}
-							
-						_z.callbacks.f_ready.push(uFunc);
-						return this;
-					}
-				};
-				
-				return unique?retObj.unique():retObj;
-			},
-		
-			arrayData: [],
-			array: function (arr,callback,sped){
-				if(typeOfVar(arr)=='undefined' && typeOfVar(callback)=='undefined' && typeOfVar(sped)=='undefined')
-					return _z.callbacks.arrayData;
-				
-				arr= arr || [];
-				callback= callback || false;
-				sped= sped || 250;
-				
-				var engine = {
-					data: arr,
-					tI: 0,
-					callback: callback,
-					speed: sped,
-					sarray: [],
-					crntSpeed: function(){ 
-						if(this.speed instanceof Array && !this.sarray.length)
-							this.sarray=Array.from(this.speed);
-							
-						var crntSpeed = 250;
-						if(this.speed instanceof Array)
-						{
-							if(this.speed.length<1) 
-								this.speed = Array.from(this.sarray);
-							
-							crntSpeed = this.speed.shift();
-						} else crntSpeed = this.speed;
-						
-						return crntSpeed;
-					},
-					start: function(cb){
-						_z(document).ready(function() {
-							return this.init(cb);
-						}.bind(this));
-					},
-					init: function(cb){
-						cb = cb || false;
-						if(typeof cb == 'function')
-							this.lfunc = cb;
-						
-						if(this.tI)
-							return false;
-						
-						var c=this.crntSpeed()||250;
-						this.tI=setTimeout(this.func.bind(this), c);
-					},
-					func: function(){
-						this.stop();
-						if(this.data.length && typeof this.callback=='function')
-						{
-							var d=this.data.shift();
-							var res=this.callback.bind(d)(this);
-							if(res===false)
-							{
-								this.data.unshift(d);
-							}
-							if(res===-1)
-							{
-								this.stop();
-								if(typeof this.lfunc=='function')
-									this.lfunc();
-								
-								return false;
-							}
-						}
-						else
-						{
-							if(typeof this.lfunc=='function')
-								this.lfunc();
-							
-							return false;
-						}
-						
-						this.init();
-					},
-					stop: function(){
-						clearTimeout(this.tI);
-						this.tI=0;
-					},
-					lfunc: false
-				};
-				_z.callbacks.arrayData.push(engine);
-				return engine;
-			}
-		},
-		
-		interval: {
-			s:100,
-			i:0,
-			ready:true,
-			apply:true,
-			init: function(c) { 
-				// c = true=call from class, false=timer
-				var c = fns.turn( c, false);
-				if((this.i && c) || this.ready==false)
-					return false;
-				
-				if(!_z.callbacks.f_ready.length && !_z.callbacks.f_asap.length && this.i)
-					return false;
-				
-				if(!this.i && c)
-					return this.i = setInterval(_z.interval.init.bind(this), typeof c=='number'?c:this.s), this;
-				
-				this.ready=false;
-				if(_z.callbacks.f_asap.length && this.apply!==false)
-				{
-					var counter=0;
-					while(_z.callbacks.f_asap.length)
-					{
-						var tF=_z.callbacks.f_asap.shift();
-						_z.backcallbacks.f_asap.push(tF);
-						logy(['call: ',tF]);
-						tF();
-						if(++counter==10)
-							break;
-					}
-						// _z.callbacks.f_asap.shift()();
-					
-				}
-				
-				if(_z.callbacks.f_ready.length && _z.document.isReady && this.apply!==false)
-				{
-					var counter=0;
-					while(_z.callbacks.f_ready.length)
-					{
-						var tF=_z.callbacks.f_ready.shift();
-						_z.backcallbacks.f_ready.push(tF);
-						logy(['call: ',tF]);
-						tF();
-						if(++counter==10)
-							break;
-					}
-						// _z.callbacks.f_ready.shift()();
-				}
-				
-				this.ready=true;
-				if(!_z.callbacks.f_ready.length && !_z.callbacks.f_asap.length && this.s!=2000)
-				{
-					clearInterval(this.i);
-					this.i=0;
-					this.s=2000;
-					console.log('Deferred .. [304:hlack]');
-					return _z.interval.init(true);
-				}
-				
-				return this;
-			},
-			stop: function() {
-				if(this.i)
-				{
-					clearInterval(this.i);
-					this.i=0;
-					this.s=2000;
-				}
-				
-				return this;
-			}
-		},
+    // timer
+    var interval = function interval() {
+        $this = (this && this.window === this) ? interval : (this instanceof interval) ? this : interval;
+
+        if( arguments.length == 1 && arguments[0] instanceof interval )
+            return arguments[0];
+
+        return new ( $this.init.bind( $this ) )( ...arguments );
+    };
+    // hold timer
+    interval.hold = false;
+    // timer default interval = 1 second
+    interval.interval = 1000;
+    // timer inestanss
+    interval.instances = [];
+// stop all timers
+    interval.stopAll = function stopAll() {
+        for(var i = 0, iL = this.instances.length; i < iL; i++)
+            this.instances[i].stop();
+
+        return this;
+    };
+// start all timers
+    interval.startAll = function startAll() {
+        for(var i = 0, iL = this.instances.length; i < iL; i++)
+            this.instances[i].start();
+
+        return this;
+    };
+// remove all timers
+    interval.removeAll = function removeAll(keepData) {
+        // do not delete data
+        keepData = keepData || false;
+        for(var i = 0, iL = this.instances.length; i < iL; i++)
+            this.instances[i].remove(keepData);
+
+        return this;
+    };
+
+    // _z.interval timer prototype
+    interval.timer = interval.prototype = {
+// timer version
+        version: "0.0.1",
+// timer id
+        id: 0,
+// timer interval
+        interval: 0,
+// timer isrunning
+        isRunning: false,
+// timer for one execution
+        isOnce: false,
+// timer for one execution is runned
+        executionCount: 0,
+// assign time
+        stamp: 0,
+// timer callback
+        callback: fns.false,
+
+        constructor: interval,
+
+// create new instance _z()
+        init: function timer(fn, iv) {
+            // run once
+            if( this.stamp !== 0 ) return false;
+
+            fn = fn || fns.false;
+            iv = iv || interval.interval;
+
+            // register timer interval
+            this.interval = ( _z.isNumber(fn) && fn ) || ( _z.isNumber(iv) && iv ) || interval.interval;
+            // register timer callback
+            this.callback = ( _z.isFunction(iv) && iv ) || ( _z.isFunction(fn) && fn ) || fns.false;
+
+            // register timer created time
+            this.stamp = fns.time();
+
+            // register this instance
+            interval.instances.push(this);
+            return this;
+        },
+
+// run callback
+        execFunction: function execFunction(force) {
+            if( this.stamp === undefined ) return false;
+
+            // do not check timer class status
+            force = force || false;
+
+            // check timer class status
+            if( interval.hold !== false && force === false ) {
+                this.isRunning = false;
+                return this;
+            }
+
+            // if its timer once
+            if( this.isOnce === true )
+                this.stop();
+            else
+                this.isRunning = true;
+
+
+            this.executionCount++;
+            // execute function
+            return this.callback.call();
+        },
+
+// check if this timer can start
+        isReady: function isReady() {
+            if( this.stamp === undefined ) return false;
+
+            return (
+// timer system not on hold
+                interval.hold === false &&
+// no already running
+                this.isRunning === false &&
+// if its once ? not run yet
+                ((this.isOnce === true && this.executionCount < 1) || this.isOnce === false) );
+        },
+
+// start timer once
+        once: function once(status) {
+            status = arguments.length ? !!status : null;
+            if( status === null ) return this.isOnce;
+
+// change timer typer
+            this.isOnce = !!status;
+
+            return this;
+        },
+
+// start timer
+        start: function start() {
+            if( this.stamp === undefined ) return false;
+
+            // is it already running ?
+            if( this.isRunning === false ) {
+                // if its timer once
+                if( this.isOnce === true && this.executionCount > 0 ) return this;
+
+                // create interval & register id & change status
+                this.isRunning = !!(this.id = setInterval(this.execFunction.bind(this), this.interval));
+            }
+
+            return this;
+        },
+
+// stop timer
+        stop: function stop() {
+            if( this.stamp === undefined ) return false;
+
+            if( this.id && this.id != 0 ) {
+                // stop interval
+                clearInterval(this.id);
+                // update status
+                this.isRunning = false;
+                // remove interval id
+                this.id = 0;
+            }
+
+            return this;
+        },
+
+// delete timer
+        remove: function remove(keepData) {
+            if( this.stamp === undefined ) return false;
+
+            // do not delete data
+            keepData = keepData || false;
+            var thisIndex = interval.instances.indexOf(this);
+            if( thisIndex !== -1 ) {
+                // if timer running stop it
+                if( this.isRunning ) return this.stop().remove(keepData);
+                // remove it
+                interval.instances.remove(thisIndex);
+            }
+            else
+                return false;
+
+            // delete data
+            if( keepData !== true )
+                _z.for(this, (k, v)=>this[k] = undefined);
+
+            return true;
+        },
+    };
+    interval.timer.init.prototype = interval.timer;
+
+    // timer system
+	var __zTimering = {
+	    timer: interval
 	};
 
 	// declare module system
@@ -3864,7 +3778,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			global: function global() {
 				if( _z.isset(this.global.registered) && this.global.registered===true ) return this;
 				
-				var w = _z.vanilla.window&&_z.vanilla.window || window;
+				// var w = _z.vanilla.window&&_z.vanilla.window || window;
+				var w = _vanilla.window&&_vanilla.window || window;
 				if( !_z.isWindow(w) ) return console.error("UnderZ[" + this.id + "]: No Window Found."), this;
 				
 				if( _z.isset(w[ this.id ]) ) return console.error("UnderZ[" + this.id + "]: Already Exist!"), this;
@@ -4286,6 +4201,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             withCredentials: xhr.withCredentials
                         };
                         $this = _z.extend(true, $this, newXHRStatus);
+                        console.log($this);
                         $this['param'] = _z.extend(true, $this['param'], newXHRStatus);
                     };
 
@@ -5744,20 +5660,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         right: (rect.right||0),
                         left: (rect.left||0) + (scrolls? (document.body.scrollLeft||0) : 0),
                         bottom: (rect.bottom||0),
-
                         // height of element
                         height: parseInt( style.height ),
 
                         // outer
                         // the height of an element (includes padding and border).
                         outerHeight: e.offsetHeight,
-                        // (
-                        // parseInt( style.height ) +
-                        // parseInt(style.paddingTop) +
-                        // parseInt(style.paddingBottom) +
-                        // parseInt(style.borderTop) +
-                        // parseInt(style.borderBottom)
-                        // ),
 
                         // outer
                         // the height of an element (includes padding, border and margin).
@@ -5766,37 +5674,15 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             parseInt(style.marginTop) +
                             parseInt(style.marginBottom)
                         ),
-                        // (
-                        // parseInt( style.height ) +
-                        // parseInt(style.paddingTop) +
-                        // parseInt(style.paddingBottom) +
-                        // parseInt(style.borderTop) +
-                        // parseInt(style.borderBottom) +
-                        // parseInt(style.marginTop) +
-                        // parseInt(style.marginBottom)
-                        // ),
 
                         // inner
                         // the height of an element (includes padding).
                         innerHeight: e.clientHeight || e.scrollHeight,
-                        // (
-                        // parseInt(style.height) +
-                        // parseInt(style.paddingTop) +
-                        // parseInt(style.paddingBottom)
-                        // ),
 
                         width: parseInt( style.width ),
-                        // (function(e) { var style = vanilla( 'compStyle' )(e);
-                        // return e.offsetWidth +
-                        // parseInt(style.marginLeft) +
-                        // parseInt(style.marginRight);
-                        // })(e),
 
                         // the width of an element (includes padding and border).
                         outerWidth: e.offsetWidth,
-                        // (function(e) { var style = vanilla( 'compStyle' )(e);
-                        // return e.offsetWidth;
-                        // })(e),
 
                         // the width of an element (includes padding, border and margin).
                         outerWidthWP: (
@@ -5806,9 +5692,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         ),
 
                         innerWidth: e.clientWidth || e.scrollWidth,
-                        // (function(e) { var style = vanilla( 'compStyle' )(e);
-                        // return e.clientWidth;
-                        // })(e),
                     };
                 }
 
@@ -6629,22 +6512,22 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			// append
 			if( perfix ) {
 				// array
-				if( typeOfVar( object ) === 'array' ) {
+				if( typeOfVar( object ) === varsType.a ) {
 					for( i = 0, len = object.length; i < len; i++ )
 						if ( /\[\]$/.test( perfix ) )
 							add( perfix, object[i] );
 						else
-							param( object[i], perfix + '[' + ( typeOfVar( object[i] ) === 'object' ? i : '' ) + ']', parts );
+							param( object[i], perfix + '[' + ( typeOfVar( object[i] ) === varsType.o ? i : '' ) + ']', parts );
 				}
 				// object
-				else if( typeOfVar( object ) === 'object' ) {
+				else if( typeOfVar( object ) === varsType.o ) {
 					for( var prop in object )
 						param( object[ prop ], perfix + '[' + prop + ']', parts );
 				}
 				// string
 				else add( perfix, object );
 			}
-			else if( typeOfVar( object ) === 'array' ) {
+			else if( typeOfVar( object ) === varsType.a ) {
 				// elements
 				elmFunc.elmLoop( object, function( e, v ) {
 					if( e.name )
@@ -6732,8 +6615,11 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 	} ].extend;
 	
 	// Objects function
-	[ _z, {
-		// remove from `obj` the `attr`
+	[ _z,
+        // vanilla shortcut functions
+        _vanilla, {
+
+	    // remove from `obj` the `attr`
 		removeFrom: function removeFrom( obj, attr ) {
 			if( arguments.length == 0 )
 				return [];
@@ -6783,11 +6669,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		},
 		
 		// type of `val`
-		type: function type( val ) {
-			return protos.object.toString.call( val )
-				.replace( '[object ', '' ).replace( ']', '' )
-				.trim();
-		},
+		type: function type( val ) { return TOV(val); },
 		
 		// is element == window
 		isWindow: isWindow,
@@ -6840,18 +6722,8 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		},
 		
 		// is `elm` instanceof _z
-		is_z: is_z,/*function is_z( elm ) {
-			return elm instanceof _z;
-			// useless
-			// var elm = elm || false;
-			// try{
-				// if( !!!elm || !!!elm['init'] || !!!elm['underZ'] || elm.init.prototype !== _z.prototype || elm.init !== _z.$.init )
-					// return false;
-				// else
-					// return true;
-			// } catch( e ) { return false; }
-		},*/
-		
+		is_z: is_z,
+
 		// is `elm` == _z
 		isCore: isCore,
 		
@@ -7049,12 +6921,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			comment: window.document.COMMENT_NODE || 8,
 			document: window.document.DOCUMENT_NODE || 9
 		},
-		
-		// vanilla shortcut functions
-		vanilla: function(){
-			return [ this.vanilla, vanilla() ].extend, vanilla();
-		},
-		
+
 		// get HTMLNodes by types
 		HTMLNodes: function HTMLNodes( rootNode, isDeepSearch, nodeType ) {
 			var _nodes = [],
@@ -7096,7 +6963,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 	} ].extend;
 	
 	// deferring system
-	[ _z, __zDeferring ].extend;
+	[ _z, __zTimering ].extend;
 	
 	// _z features
 	[ _z, {
@@ -7200,7 +7067,6 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			
 			if(!_z.document.isReady)
 			{
-				// _z.callbacks.ready(function(){
 				_z.ready(function(){
 					_z.prevent(s, a, !p);
 				});
@@ -7572,27 +7438,19 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
         cookie: {
             set: function (name, value, days) {
                 return this.setBySec(name, value, days * 24 * 60 * 60);
-
-                if (days) {
-                    var date = new Date();
-                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                    var expires = "; expires=" + date.toGMTString();
-                }
-                else var expires = "";
-                var ck = name + "=" + value + expires + "; path=/";
-                document.cookie = ck;
-                return this;
             },
 
             // add cookie expires within seconds
             setBySec: function (name, value, seconds) {
-                if (seconds) {
+                if( !!!name ) return this;
+
+                var expires = "";
+                if( seconds && typeOfVar(seconds) == varsType.n ) {
                     var date = new Date();
-                    date.setTime(date.getTime() + (seconds * 1000));
-                    var expires = "; expires=" + date.toGMTString();
+                    date.setTime( date.getTime() + (seconds * 1000) );
+                    expires = "; expires=" + date.toGMTString();
                 }
-                else var expires = "";
-                var ck = name + "=" + value + expires + "; path=/";
+                var ck = name + "=" + (value || "") + expires + "; path=/";
                 document.cookie = ck;
                 return this;
             },
@@ -7600,24 +7458,21 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
             get: function (name) {
                 var name = name || "",
                     nameEQ = name + "=";
-                var ca = document.cookie.split(';'),
+                var ca = document.cookie.split(';').filter(Boolean),
                     cs = {};
-                for (var i = 0; i < ca.length; i++) {
+                for( var i = 0, caL = ca.length; i < caL; i++ ) {
                     var c = ca[i];
                     while (c.charAt(0) == ' ') c = c.substring(1, c.length);
 
-                    if (name && c.indexOf(nameEQ) == 0) {
+                    if( name && c.indexOf(nameEQ) == 0 )
                         return c.substring(nameEQ.length, c.length);
-                    }
-                    else if (!!!name) {
+                    else if ( !!!name ) {
                         c = c.split('=');
-                        cs[c[0]] = c.length > 2 ? c.slice(1) : c[1];
+                        cs[ c[0] ] = c.length > 2 ? c.slice(1) : c[1];
                     }
-                    // if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-
                 }
-                return (name) ? "" : (cs || {});
-                return "";
+
+                return name ? "" : (cs || {});
             },
 
             delete: function (name) {
@@ -7627,115 +7482,25 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
     } ].extend;
 
 // _z }
+// disable [_z, {}].extend
 	// _z.extend.status = false;
 	_z.extend.status = true;
 
+// bind library
+    window._z = _z;
+// bind ready function
+    ( !window._ )&&(window._ = _z.ready.bind(_z));
 
-//							*/
-var hlack = hlack || window.hlack || {};
-	hlack = _z.extend(true, hlack);
-var xzz = xzz || {};
+    if( typeof define === "function" && define.amd && define.amd._z )
+        define( "_z", [], function () { return _z; } );
 
-// alias for _z
-var Q = Q || {};
-var mm = mm || {};
-var hh = hh || {};
-var meme = meme || {};
-var zx = zx || {};
+// auto load script
+    var scripts = _z('[underZ]').element( -1 ); // last
+    if( scripts&&scripts['innerText'] ) // auto load
+        try{ eval( scripts['innerText'] ); } catch( e ) { console.error(e); }
 
-var hook = hook || function(m){ // hook plugins in _z
-	m=m||false;
-	var newHook = false;
-	if(typeof(m)==typeof("zex"))
-		newHook = m;
-	
-	var hookError = function(){
-		if(this==false)
-			console.error("Can not hook module in hlack Engine!");
-		else
-			console.error("Module: "+this+" exist in hlack Engine!");
-		
-		return false; 
-	};
-	var hookFunc = function(f) { 
-		if(typeof(f)==typeof({}))
-		{
-			if(f['private']&&!hook.globalAll)
-			{
-				_z.extend(true, _z.privates, f);
-				return hlack;
-			}
-			var $res = _z.extend(true, hlack,f);
-			
-			return $res;
-		}
-		
-		var NH = {};
-		NH[this] = f;
-		return _z.extend(true, hlack,NH);
-	};
-	
-	if(newHook)
-	{
-		if(hlack[newHook])
-		{
-			return hookError.bind(newHook);
-		}
-		else
-		{
-			return hookFunc.bind(newHook);
-		}
-	}
-	else if(typeof(m)==typeof({}))
-	{
-		return hookFunc;
-	}
-	
-	return hookError.bind(false);
-};
-hook.globalAll = false;
-
-hook(xzz)(xzz);
-hook(Q)(Q);
-hook(mm)(mm);
-hook(hh)(hh);
-hook(meme)(meme);
-hook(zx)(zx);
-
-
-// alias for _z
-window.meme = window.hh = window.mm = window.zx = window.Q = window._z = window.hlack = hlack;
-
-window._z = _z;
-window.hook = hook;
-
-if( !window._ )
-	window._ = _z.ready.bind(_z);
-
-if( typeof define === "function" && define.amd && define.amd._z ) {
-	define( "_z", [], function () { return _z; } );
-}
-
-
-var scripts = _z('[underZ]').element( -1 ); // last
-if( scripts&&scripts['innerText'] ) // auto load
-	try{ eval( scripts['innerText'] ); } catch( e ) { console.error(e); }
-
-if( !!!_z.vanilla.vanilla )
-	_z.ready( ()=>_z.vanilla() );
-;(function() { 
-	'use strict';
-	if( _z.extend.status === false )
-	{
-		// fns.objProp(_z.prototype, { c: 0});
-		// _z.$.init.prototype = fns.objProp(_z.$.init.prototype, { c: 0});
-		
-	}
-		// _z = Object.freeze( _z );
-})();
-
-	hlack.typeOfVar = typeOfVar;
-	return hlack;
+    // assign function
+	typeOfVar.varsType = varsType;
+	_z.typeOfVar = typeOfVar;
+	return _z;
 })( this );
-
-_z.ready(()=>{ _z.interval.init(true) });
