@@ -1589,8 +1589,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		// Merge the object into the extended object
 		var merge = function(obj) {
-			for( var prop in obj )
-			{
+			for( var prop in obj ) {
 				if( 
 					(hasProp( obj, prop ) && isDeclare( prop, obj )) || 
 					obj[ prop ] === extended
@@ -2234,8 +2233,16 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		get: function() {
 			return extendFunction.status === false ? this : (
 				( !!!this.length || this.length < 2 ) ? ( this[0] || this ) :
-					_z.extend( true, this[0], ...subArray( 1, this ) )
+                    _z.extend( true, this[0], ...subArray( 1, this ) )
 				);
+		},
+		configurable: false
+	});
+
+	// [ arg1, args... ].mix => _z.mix( arg1, ...args )
+	Object.defineProperty( Array.prototype, 'mix', {
+		get: function() {
+			return this.length > 1 ? mix( this[0], ...subArray( 1, this ) ) : false;
 		},
 		configurable: false
 	});
@@ -7480,7 +7487,6 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
             }
         }
     } ].extend;
-
 // _z }
 // disable [_z, {}].extend
 	// _z.extend.status = false;
