@@ -3291,7 +3291,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
-    }].extend;
+    }].mix;
 	
 	// shared, functions in _z & _z()
 	var __zFunctions = {
@@ -4701,13 +4701,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 // _z.$ {
 
 	// elements function
-	[ _z.$, __zElementsFunctions, __zClassFunctions, __zAttrFunctions ].extend;
+	[ _z.$, __zElementsFunctions, __zClassFunctions, __zAttrFunctions ].mix;
 	
 	// add sheared functions to _z.$
-	[ _z.$, __zFunctions ].extend;
+	[ _z.$, __zFunctions ].mix;
 	
 	// add serialize functions to _z.$
-	[ _z.$, __zSerialize ].extend;
+	[ _z.$, __zSerialize ].mix;
 	
 	// elements function
 	[ _z.$, {
@@ -6364,7 +6364,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             });
             return this;
         }
-    } ].extend;
+    } ].mix;
 	
 	[ _z.$, {
 		// element scrollTop
@@ -6404,7 +6404,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			return this.length==1? $return[0] : $return;
 		},
 		
-	} ].extend;
+	} ].mix;
 	
 	[ _z.$, {
 			// offset
@@ -6479,20 +6479,20 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
             }
         },
 
-	].extend;
+    ].mix;
 // _z.$ }
 
 
 // _z {
 
 	// add global functions to _z
-	[ _z, __zGlobalFunctions ].extend;
+	[ _z, __zGlobalFunctions ].mix;
 	
 	// add shared functions to _z
-	[ _z, __zFunctions ].extend;
+	[ _z, __zFunctions ].mix;
 	
 	// add serialize settings to _z
-	[ _z, __zSerializeSettings ].extend;
+	[ _z, __zSerializeSettings ].mix;
 	
 	// add ajax functions to _z
 	[ _z, {
@@ -6552,7 +6552,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		
 	},
 	__zAjax
-	].extend;
+    ].mix;
 	
 	// private usage
 	[ _z, {
@@ -6619,7 +6619,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			// elm function
 			elmFunc: elmFunc,
 		},
-	} ].extend;
+	} ].mix;
 	
 	// Objects function
 	[ _z,
@@ -6967,10 +6967,10 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			});
 		},
 		
-	} ].extend;
+	} ].mix;
 	
 	// deferring system
-	[ _z, __zTimering ].extend;
+	[ _z, __zTimering ].mix;
 	
 	// _z features
 	[ _z, {
@@ -7142,7 +7142,7 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		// return css select from dom element
 		cssSelector: cssSelector,
 		
-	} ].extend;
+	} ].mix;
 	
 	// loader js, css, img
 	[ _z, {
@@ -7429,16 +7429,16 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
             return this;
 
         return this.ready( fn, true );
-    }} ].extend;
+    }} ].mix;
 	
 	// global variables
 	[ _z, {
 		// register tag default display style
 		defaultDisplayStyleLog: {},
-	} ].extend;
+	} ].mix;
 	
 	// declare system
-	[ _z, __zDeclare ].extend;
+	[ _z, __zDeclare ].mix;
 
 	// cookie system
 	[ _z, { // cookie
@@ -7486,9 +7486,9 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
                 return this.set(name, '', -1);
             }
         }
-    } ].extend;
+    } ].mix;
 // _z }
-// disable [_z, {}].extend
+// disable [_z, {}].mix
 	// _z.extend.status = false;
 	_z.extend.status = true;
 
