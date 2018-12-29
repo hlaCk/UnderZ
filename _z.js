@@ -323,8 +323,7 @@ var
 	},
 	// toUpperCase
 	toUC = function( $var, $reDefine ) {
-		if( typeOfVar($var)==varsType.a )
-		{
+		if( typeOfVar($var)==varsType.a ) {
 			if( !isset($reDefine) )
 				$var2 = Array.from($var),
 				$var = $var2;
@@ -342,8 +341,7 @@ var
 	
 	// forEach
 	foreach = function foreach( obj, cb, context ) {
-		if( typeOfVar( obj ) == varsType.f )
-		{
+		if( typeOfVar( obj ) == varsType.f ) {
 			context = cb;
 			cb = obj;
 			obj = this['element']&&this.element() || [];
@@ -368,10 +366,8 @@ var
 		try {
 			var _keys = Object.keys( obj );
 			
-			for( var i = 0, l = _keys.length; i < l ; i++ )
-			{
+			for( var i = 0, l = _keys.length; i < l ; i++ ) {
 				var key = _keys[ i ];
-				
 				var cbReturn = cb.apply(context||obj, [ key, obj[ key ], obj]);
 				
 				if( !!!cbReturn && cbReturn != undefined )
@@ -381,9 +377,7 @@ var
 				else
 					returns[ key ] = obj[ key ];
 			}
-		}
-		catch(e)
-		{
+		} catch(e) {
 			if(e !== stopLoopinException) throw e;
 		}
 		
@@ -431,8 +425,7 @@ var
 		if( isset(tunning[2]) && _z.isFunction(tunning[2]) )
 			callback = tunning[2] || callback;
 		
-		if( isset(callback) && !_z.isFunction(callback) )
-		{
+		if( isset(callback) && !_z.isFunction(callback) ) {
 			var _callback = _z( callback );
 			callback = (x)=>_z(x).is( _callback );
 		}
@@ -443,26 +436,23 @@ var
 			callback = array,
 			array = this.element(),
 			filterElements = true;
+
 		if( is_z(this) )
 			array = this.element(),
 			filterElements = true;
 		
-		if( isset(array) )
-			array = _z( array ).element();
+		if( isset(array) ) array = _z( array ).element();
 		
 		callback = _z.isFunction(callback)&&callback || function( x ) { return x; };
 		var result = protos.array.filter.apply( array, [callback] ) || array;
 		
-		if( filterElements && is_z(this) )
-		{
+		if( filterElements && is_z(this) ) {
 			var newInstance = this.newSelector( result );
 			newInstance.args = [ array ];
 			newInstance.selector = "";
 			
 			return newInstance;
-		}
-		else return _z( result );
-		// return filterElements ? _z( result ) : result;
+		} else return _z( result );
 	},
 
     // vanillas shortcuts
@@ -561,8 +551,7 @@ var
                     elm = this;
 
             var $return = [];
-            if( arguments.length )
-            {
+            if( arguments.length )  {
                 $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
 
                 elmFunc.elmLoop( elm, function( e ) {
@@ -582,8 +571,7 @@ var
                 $return = filterArray( $return );
             }
 
-            if( is_z(this) )
-            {
+            if( is_z(this) ) {
                 var newInstance = this.newSelector( $return );
                 newInstance.args = arguments;
                 newInstance.selector = $elm;
@@ -615,9 +603,7 @@ var
                             var l = css[i].split(": ");
                             if( !!l[1] || l[1] == "" )
                                 s[ l[0].toLowerCase() ] = ( l[1] );
-                        }
-                        catch(e)
-                        {
+                        } catch(e) {
                             console.warn( [ css[i], !!!css[i] ] );
                         }
             }
