@@ -4,6 +4,10 @@
 
 * [Wiki Page](https://github.com/hlaCk/UnderZ/wiki)
 
+* [Features Page](https://github.com/hlaCk/UnderZ/wiki/Features)
+
+* [Syntax Page](https://github.com/hlaCk/UnderZ/wiki/Syntax)
+
 ## How to use it ?
 1. Get the library file [_z.js](https://github.com/hlaCk/UnderZ/blob/master/_z.js) and place it in your project folder.
 2. Include the library in your html file inside `<head>` tag, **better if it is The First JavaScript Include**: 
