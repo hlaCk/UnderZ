@@ -1,1 +1,2 @@
-console.log(333);
+console.error("file 1 code.js");
+document.title = "code.js";
