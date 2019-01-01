@@ -3,67 +3,68 @@
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window ) {
-// Function.callSelf(args) = Function.apply( Function, args )
+// Function.callSelf(...arguments) = Function.apply( Function, arguments )
 if(typeof Function.prototype.callSelf !== 'function')
-    Function.prototype.callSelf = function( args ) { args = args || [];
-        return this.apply( this, args );
+    Function.prototype.callSelf = function() {
+        return this.apply( this, arguments );
+    };
+
+// Function.bindSelf(...arguments) = Function.bind( Function, arguments )
+if(typeof Function.prototype.bindSelf !== 'function')
+    Function.prototype.bindSelf = function( ) {
+        return this.bind( this, ...arguments );
     };
 
 // Object.each(function) = Object
 if(typeof Object.prototype.each !== 'function')
     Object.prototype.each = function( cb ) {
-        cb = cb || false;
-        if( !_z.isFunction(cb) ) return this;
+            cb = cb || false;
+            if( !_z.isFunction(cb) ) return this;
 
-        if( _z&&_z["for2"] ) {
-            var nO = _z.for(this, cb);
-            if( _z.isObject(nO) )
-                Object.assign(this, nO);
-        } else {
-            try {
-                var _keys = Object.keys( this );
-                for( var i = 0, l = _keys.length; i < l ; i++ ) {
-                    var cbReturn = cb.apply(this, [ _keys[i], this[ _keys[i] ], this]);
+            if( _z&&_z["for"] ) {
+                var nO = _z.for(this, cb);
+                if( _z.isObject(nO) )
+                    Object.assign(this, nO);
+            } else {
+                try {
+                    var _keys = Object.keys( this );
+                    for( var i = 0, l = _keys.length; i < l ; i++ ) {
+                        var thisObj = {};
+                        thisObj[ _keys[i] ] = this[ _keys[i] ];
+                        var cbReturn = cb.apply(this,  [ _keys[i], this[ _keys[i] ], this[ _keys[i] ]] );
 
-                    if( cbReturn === false )
-                        break;
-                    else if( cbReturn != undefined )
-                        this[ _keys[i] ] = cbReturn;
+                        if( cbReturn === false )
+                            break;
+                        else if( cbReturn != undefined )
+                            this[ _keys[i] ] = cbReturn;
+                    }
+                } catch(e) {
+                    throw e;
                 }
-            } catch(e) {
-                throw e;
             }
-        }
 
-        return this;
-    };
-
-// Function.bindSelf(args) = Function.bind( Function, args )
-if(typeof Function.prototype.bindSelf !== 'function')
-    Function.prototype.bindSelf = function( args ) { args = args || [];
-        return this.bind( this, args );
-    };
+            return this;
+        };
 
 // Array.pushSetter='value' => Array.push( 'value' )
 if(typeof Array.prototype.pushSetter !== 'function')
 	Object.defineProperty( Array.prototype, 'pushSetter', { set: function(v) { return this.push(v); }, configurable: false} );
 
-// String String.replaceArray(Array needle, Array haystack)
-if(typeof String.prototype.replaceArray !== 'function')
-	String.prototype.replaceArray = function(find, replace) {
-		var replaceString = this;
-		for (var i = 0, fL = find.length; i < fL; i++)
-		    replaceString = replaceString.replace(find[i], replace[i]);
+// Object.getType => type of object lowerCase
+if(typeof Object.prototype.getType !== 'function')
+    Object.prototype.getType = function() {
+        if(this instanceof _z) return "_z";
+        else if(this == _z) return "underz";
 
-		return replaceString;
-	};
+        return Object.prototype.toString.call( this ).replace("[object ", "").replace("]", "").trim().toLowerCase();
+    };
 
-// String String.replaceAll(String needle, String haystack)
-if(typeof String.prototype.replaceAll !== 'function')
-	String.prototype.replaceAll = function(search, replacement) {
-		var target = this;
-		return target.split(search).join(replacement);
-	};
+// Object.isType => true|false check object type
+if(typeof Object.prototype.isType !== 'function')
+    Object.prototype.isType = function( check ) {
+        check = ( arguments.length == 1 ) ? String(check).toLowerCase() :  -1;
+        return this.getType()==check;
+    };
 
 // METHD1: Normal Array
 	// [1, 2, 3, 1].unique() = [1, 2, 3]
@@ -85,10 +86,13 @@ if(typeof Array.prototype.unique !== 'function')
 	Array.prototype.unique = function(keyUnique){
 		var keyUnique = keyUnique || null;
 
+        if( keyUnique === null )
+            return [...new Set(this)];
+
 		var u = {}, a = [];
 		for(var i = 0, l = this.length; i < l; ++i){
 			var currentKeyElement = this[i];
-			currentKey = keyUnique !== null ? this[keyUnique] : currentKeyElement;
+			currentKey = this[i][keyUnique];
 
 			if( u.hasOwnProperty(currentKey) ) continue;
 
@@ -98,49 +102,47 @@ if(typeof Array.prototype.unique !== 'function')
 		return a;
 	};
 
-// Array Array.add( ARRAY ) = add multi var
+// Array.add( ...ARRAY ) = push all the arguments
 if(typeof Array.prototype.add !== 'function') {
-	Array.prototype.add = function(arr) {
-		var arr = arr || {};
-		if( !((typeof arr) in { 'function':0, 'FUNCTION':0, 'object':0, 'OBJECT':0 }) )
-			arr = [ arr ];
-		
-		if((typeof this.push) in { 'function':0, 'FUNCTION':0 })
-			return this.push.apply(this, arr);
-		else
-			return _z.extend(true, this, _z.extend(true, _z(this).toArray(), arr));
+	Array.prototype.add = function() {
+		var arr = _z.Array(arguments) || [];
+
+		if( _z.isFunction(this.push) )
+            return this.push.apply(this, arr);
+        else
+			return _z.arrayAppend(this, ...arr);
 	};
 }
 
-// Array Array.inArray(needle, haystack) = index OR -1 if not found
+// Array.inArray(needle, haystack) = index OR -1 if not found
 if(typeof Array.prototype.inArray !== 'function')
 	Array.prototype.inArray = function(needle, haystack) {
 		var haystack = haystack || this;
-		if( typeof(haystack) != typeof([]) ) return -1;
-		
-		var length = haystack.length;
-		for(var i = 0; i < length; i++)
+		if( !_z.isArray(haystack) ) return -1;
+
+		for(var i = 0, length = haystack.length; i < length; i++)
 		    if(haystack[i] == needle)
-				return haystack.indexOf(needle) ? haystack.indexOf(needle) : 0;
+				return haystack.indexOf(needle) || 0;
 
 		return -1;
 	};
 
-// Array Array.remove(from, to) = remove vars by index or value
+// Array.remove(from, to) = remove vars by index or value
 if(typeof Array.prototype.remove !== 'function')
-	// Array Remove - By John Resig (MIT Licensed)
 	Array.prototype.remove = function(from, to) {
-		if( arguments.length > 0 )
+        var args = arguments;
+		if( args.length > 0 )
 			from = typeof(from)==typeof(7) ? from : this.indexOf( from );
-		
-		if( arguments.length > 1 )
+
+		if( args.length > 1 )
 			to = typeof(to)==typeof(6) ? to : this.indexOf( to );
 
-		from = from === -1 ? false : from;
-		to = to === -1 ? false : to;
+		from = (from === -1 && args[0] !== -1) ? false : from;
+		to = (to === -1 && args[1] !== -1) ? false : to;
 		if( (!!!from && typeof(from)!=typeof(4)) && (!!!to && typeof(to)!=typeof(5)) )
 			return this;
-		
+
+        // Array Remove - By John Resig (MIT Licensed)
 		var rest = this.slice((to || from) + 1 || this.length);
 		this.length = from < 0 ? this.length + from : from;
 
@@ -153,78 +155,44 @@ if(typeof Array.prototype.removeAll !== 'function')
 		if( this.indexOf(val) === -1 )
 			return this;
 
-        while( this.indexOf(val) !== -1 )
-		    this.remove(val);
+        while( this.indexOf(val) !== -1 && this.remove(val));
 
 		return this;
 	};
 
-// String Number.plus( number ) = +1 to large number
-if(typeof Number.prototype.plus !== 'function')
-    // 9999999999999998// 9999999999999998
-    Number.prototype.plus= function(num){
-		if( !this.length ) return String(num);
-        var nW = "";
-        for(var n_ = this.length -1 ; n_ > 0; n_--) {
-            if(this[n_] == "9")
-            	nW = this[n_] + nW;
-            else {
-                nW = nW != "" ? String(this[n_]) + String(nW) : String(this[n_]);
-                break;
+// String String.replaceArray(Array needle, Array haystack)
+    if(typeof String.prototype.replaceArray !== 'function')
+        String.prototype.replaceArray = function(find, replace) {
+            var replaceString = this;
+            find = (find&&(find).isType("array")) ? find : [find] || [];
+            replace = (replace&&(replace).isType("array")) ? replace : [replace] || [];
+
+            for (var i = 0, fL = find.length; i < fL; i++)
+                replaceString = replaceString.replace(find[i], (replace&&(replace).isType("array")) ? replace[i]||"" : replace);
+
+            return replaceString;
+        };
+
+// String String.replaceAll(String needle, String haystack)
+    if(typeof String.prototype.replaceAll !== 'function')
+        String.prototype.replaceAll = function(search, replacement) {
+            var target = this;
+            search = (search&&(search).isType("array")) ? search : [search] || [];
+            replacement = (replacement&&(replacement).isType("array")) ? replacement : [replacement] || [];
+
+            if(search.length > 1) {
+                if( replacement.length < search.length )
+                    replacement.add( ...Array.from({length: search.length-replacement.length}, () => "") );
+                for (var i = 0, fL = search.length; i < fL; i++)
+                    target = target.split(search[i]).join((replacement&&(replacement).isType("array")) ? replacement[i] : replacement);
+                return target;
             }
-        }
-        return String(this.substr(0, n_)) + String( Number(nW) + Number(num) );
 
-        // if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
-        //     var data2 = String(this).substr(-13);
-        //     var data1 = String(this).substr(0, String(this).length - 13);
-        //     var nW = "";
-        //     for(var n_ = 0; n_ < data2.length; n_++) {
-        //         if(data2.substr(n_, 1) == "0")
-        //             nW += "0";
-        //         else
-        //             break;
-        //     }
-        //     if( nW.length )
-        //     	data2 = data2.substr(nW.length, data2.length -nW.length);
-        //
-        //     var r = Number(data2) + Number(num);
-        //     return String(data1) + String(nW) + String(r);
-        // }
-        // return Number(this) + Number(num);
-    };
-
-// String Number.minus( number ) = -1 to large number
-if(typeof Number.prototype.minus !== 'function')
-    // 9999999999999998
-    Number.prototype.minus= function(num){
-        if( this >= 9999999999999998 || this+num >= 9999999999999998 ) {
-            var data2 = String(this).substr(-5);
-            var data1 = String(this).substr(0, String(this).length - 5);
-            var nW = "";
-            for(var n_ = 0; n_ < data2.length; n_++) {
-                if(data2.substr(n_, 1) == "0")
-                    nW += "0";
-                else
-                    break;
-            }
-            if( nW.length )
-                data2 = data2.substr(nW.length, data2.length -nW.length);
-
-            var r = Number(data2) - Number(num);
-            return String(data1) + String(nW) + String(r);
-        }
-        return Number(this) - Number(num);
-    };
-
-
-// String String.plus( number ) = +1 to large number
-if(typeof String.prototype.minus !== 'function')
-    String.prototype.minus = Number.prototype.minus;
-
-// String String.minus( number ) = -1 to large number
-if(typeof String.prototype.plus !== 'function')
-    String.prototype.plus = Number.prototype.plus;
+            search = search[0];
+            replacement = replacement.length ? replacement[0] : "";
+            replacement = (replacement===undefined || replacement===null) ? "" : replacement;
+            return target.split(search).join(replacement);
+        };
 
 // variables
 var
@@ -292,7 +260,7 @@ var
 	
 	// type of `val` as string toLowerCase
 	TOV = function typeOfVar( val ) {
-        return protos.object.toString.call( val ).replaceArray( ['[object ', ']'], ['', ''] ).trim();
+        return protos.object.toString.call( val ).replaceAll( '[object ', '').replaceAll( ']', '').trim();
     },
 
 	typeOfVar = function type( val ) { return TOV( val ).toLowerCase(); },
@@ -1343,7 +1311,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		
 		return selectorVal;
 	},
-	
+
 	// return css selector by DOM element 
 	cssSelector = function getCSSSelectorByElement( node, limit, path, returnType ) {
 		path = path || [];
@@ -1415,7 +1383,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
 	// register global variables
 	window.fns = window.fns || fns;
-	window.Math.__random = isset(window.Math['__random']) ? window.Math['__random'] : window.Math['random'];
+	window.Math.__random = isset(window.Math['__random']) ? window.Math['__random'].bindSelf() : window.Math['random'].bindSelf();
 	window.Math.random = function() { return arguments.length ? _z.rnd( ...arguments ) : window.Math['__random'](); };
 	// register global variables
 	
@@ -1847,7 +1815,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 					
 					if( v && v['querySelectorAll'] ) {
 						v = v.querySelectorAll( qSelector );
-						if( v.length ) $elements.add( _z( v ).element() );
+						if( v.length ) $elements.add( ..._z( v ).element() );
 					}
 				});
 			}
@@ -2189,7 +2157,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	// [ arg1, args... ].mix => _z.mix( arg1, ...args )
 	Object.defineProperty( Array.prototype, 'mix', {
 		get: function() {
-			return this.length > 1 ? mix( this[0], ...subArray( 1, this ) ) : false;
+			return this.length > 1 ? mix( this[0], ...subArray( 1, this ) ) : this[0];
 		},
 		configurable: false
 	});
@@ -2332,7 +2300,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
 			if(arguments.length === 2 || arguments.length === 3) {
 				if(
-					(  arguments[0] && (_z.isTypes("string", arguments[0])||_z.isTypes(true, arguments[0])) || true ) && 
+					(  arguments[0] && (_z.isTypes("string", arguments[0])||_z.isTypes(true, arguments[0])) || true ) &&
 					(  arguments[1] && (_z.isTypes("string", arguments[1])||_z.isTypes(true, arguments[1])) || true )
 				) {
 					deleteAttr = ( arguments[0]===true || toLC( arguments[0] ) == 'delete' || toLC( arguments[1] ) == 'delete' );
@@ -2589,7 +2557,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 			if( elm.len || elm.length ) {
 				( _z.is_z( elm ) ? elm : _z( elm ) ).each(function() {
 					if( _z.isDOM( this ) )
-						$classList.add( _z.toArray( this.classList || []) );
+						$classList.add( ..._z.toArray( this.classList || []) );
 				});
 			}
 			return $classList.unique();
@@ -2640,7 +2608,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var $return=[];
             if( elm.length > 1 ) {
                 elm.each(function() {
-                    $return.add( [_z(this).css()] );
+                    $return.add( ..._z.toArray( _z(this).css() ) );
                 });
                 return $return;
             }
@@ -2688,7 +2656,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 	var __zElementsFunctions = {
 		// add last selector elements, elm = filter by selector
 		addBack: function addBack( elm ) {
-			return this.newSelector( this.add( (isset( elm ) ? this.end().whereIs( elm ) : this.end()).element() ) );
+			return this.newSelector( this.add( ...(isset( elm ) ? this.end().whereIs( elm ) : this.end()).element() ) );
 		},
 		
 		equalsAll: function matchesAllElements( iObj ) {
@@ -3143,21 +3111,21 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 		},
 		
 		// random number // salt
-		rnd: function( start, end ) {
-			if( arguments.length > 2 || (start&&!_z.isNumber(start)) || (end&&!_z.isNumber(end)) )
+		rnd: function( min, max ) {
+			if( arguments.length > 2 || (min&&!_z.isNumber(min)) || (max&&!_z.isNumber(max)) )
 				return arguments[ _z.rnd( arguments.length-1 ) ];
 
-			if( _z.isNull(end) )
-			    end = Number.MAX_SAFE_INTEGER;
+			if( _z.isNull(max) )
+                max = Number.MAX_SAFE_INTEGER;
 
-			if( !!!end )
-				end = start,
-				start = 0;
+			if( !!!max )
+                max = min,
+                min = 0;
+
+            max = Math.__random() * ( ( ( max - min ) +1 ) || 100 ),
+            max = Math.floor( max || 100 );
 			
-			end = Math.__random() * ( ( ( end - start ) +1 ) || 100 ),
-			end = Math.floor( end || 100 );
-			
-			return start + end;
+			return min + max;
 		},
 
         // argument to array
@@ -3541,7 +3509,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     interval.timer.init.prototype = interval.timer;
 
     // timer system
-	var __zTimering = {
+	var __zWindowAddons = {
 	    timer: interval
 	};
 
@@ -4649,7 +4617,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 if( e[ 'tagName' ]&&(tn=e.tagName.toLowerCase()) ||
                     e['outerHTML']&&(tn=( /<([\w:]+)/.exec( e.outerHTML ) ||
                         ["", ""] )[1].toLowerCase()) )
-                    if( _z.isFunction(filter) && filter.callSelf( [tn] ) || !_z.isFunction(filter) )
+                    if( _z.isFunction(filter) && filter.callSelf( tn ) || !_z.isFunction(filter) )
                         $return.push( tn );
             });
 
@@ -4909,7 +4877,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 							} else if( _z.isTypes( 'selector', $val ) )
 								if( elmFunc.matches( v, $val ) ) $return.push( v );
 						});
-					} else $return.add( e['children'] );
+					} else $return.add( ..._z.toArray( e['children'] ) );
 			});
 			
 			var newInstance = this.newSelector( $return );
@@ -4964,7 +4932,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 				
 				if( v && v['querySelectorAll'] ) {
 					v = v.querySelectorAll( qSelector );
-					if( v.length ) $return.add( _z( v ).element() );
+					if( v.length ) $return.add( ..._z( v ).element() );
 				}
 			}, (v)=>{ return ( _z.isDOM( v ) || _z.type( v ) != 'NodeList' ); });
 			
@@ -5413,7 +5381,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 if( e && e["parentElement"] ) {
                     e = e.parentElement;
                     while( e && !_z(e).is( selector ) && e["parentElement"] ) {
-                        if( !filter || filter.callSelf( [e] ) )
+                        if( !filter || filter.callSelf( e ) )
                             $return.push( e );
                         e = e.parentElement;
                     }
@@ -6398,10 +6366,8 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 			while( args && (array2 = args.pop()) )
 			for( var i = 0, length = array2.length; i < length ; i++ )
 				array1.push( array2[ i ] );
-			
-				// _z.arrayAppend( array1, _z.subArray( 1, args ) );
-			
-			return array1;
+
+			return array1.length;
 		},
 
 		// DOM Node Types
@@ -6443,9 +6409,12 @@ w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'sc
 		
 	} ].mix;
 	
-	// deferring system
-	[ _z, __zTimering ].mix;
-	
+	// inject timer system to _z
+	[ _z, __zWindowAddons ].mix;
+
+    // inject timer system to window
+	[ window, __zWindowAddons ].mix;
+
 	// _z features
 	[ _z, {
         // _z.embed.data(["./test/11.jpg", function (aa) { a = aa; }] )
