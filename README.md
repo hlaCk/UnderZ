@@ -1,35 +1,55 @@
-# UnderZ: JavaScript Library.
+
+# UnderZ JS Library
+## A tiny Library With huge use.
+### Built to be:
+1. **Easier** to use with each call.
+2. **Resources friendly**, _shouldn't eat all your cake_.
+3. **Optimized performance**, each call should execute and finish ASAP.
+
+> Write and rewrite until it is right. _By: **hard coder**_
+
+
+***
+
+
+# Links:
 
 * [Library Page](https://github.com/hlaCk/UnderZ) 
 
-* [Wiki Page](https://github.com/hlaCk/UnderZ/wiki)
+* [Wiki Page](http://hlack.xyz/UnderZ/)
 
-* [Features Page](https://github.com/hlaCk/UnderZ/wiki/Features)
+* [Features Page](http://hlack.xyz/UnderZ/Features)
 
-* [Syntax Page](https://github.com/hlaCk/UnderZ/wiki/Syntax)
+* [Syntax Page](http://hlack.xyz/UnderZ/Syntax)
 
-## How to use it ?
-1. Get the library file [_z.js](https://github.com/hlaCk/UnderZ/blob/master/_z.js) and place it in your project folder.
-2. Include the library in your html file inside `<head>` tag, **better if it is The First JavaScript Include**: 
-```html
-<head>
-<script type="text/javascript" src="_z.js"></script>
-</head>
-```
-3. Done!. The library is loaded. see [Library Syntax](https://github.com/hlaCk/UnderZ/wiki/Syntax) .
+
+***
+
 
 ## Required to start
-* _z.js
+* [_z.js](https://github.com/hlaCk/UnderZ) 
+
+
+***
+
 
 ## Dependencies
 * NONE
+
+
+***
+
 
 ## Collaborators
 
 * [Turki Alrifaie](https://github.com/BlackEagleSA)
 
+
+***
+
+
 ## Copyright and license
 
-Copyright © 2008-2017 hlaCk (https://github.com/hlaCk)
+Copyright © 2008-2019 hlaCk (https://github.com/hlaCk)
 
 Licensed under the **GNU General Public License v3.0** (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
