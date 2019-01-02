@@ -14,6 +14,8 @@
 
 # Links:
 
+* [Getting Started](http://hlack.xyz/UnderZ/Getting_Started) 
+
 * [Library Page](https://github.com/hlaCk/UnderZ) 
 
 * [Wiki Page](http://hlack.xyz/UnderZ/)
