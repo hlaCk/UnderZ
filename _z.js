@@ -3,6 +3,29 @@
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window ) {
+// RegExp.regexes = Regexes source
+    if(typeof RegExp.regexes !== 'object') {
+        RegExp.regexes = {
+            // notInQuote: /(?=([^"\\]*(\\.|"([^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
+            notInQuote: /(?=(?:[^"\\]*(?:\\.|"(?:[^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
+            space: / +?|\t/,
+            CSSRole: /((\s*?@media[\s\S]*?){([\s\S]*?)}\s*?})|(([\s\S]*?){([\s\S]*?)})/,
+            CSSPropValue: /([a-zA-Z0-9\-\_]*)\s*:\s*(.*)\;/,
+        };
+    }
+
+// RegExp.mutli(RegExp, RegExp, ...RegExp) = multi RegExp
+    if(typeof RegExp.mutli !== 'function')
+        RegExp.mutli = function mutli(...regexes) {
+            return new RegExp('(' + regexes.map(r => r.source).join(')|(') + ')');
+        };
+
+// RegExp.setFlags(...flags) = add flags to the regex
+    if(typeof RegExp.prototype.setFlags !== 'function')
+        RegExp.prototype.setFlags = function setFlags(...flags) {
+            return new RegExp(this.source, flags.join(''));
+        };
+
 // Function.callSelf(...arguments) = Function.apply( Function, arguments )
     if(typeof Function.prototype.callSelf !== 'function')
         Function.prototype.callSelf = function() {
@@ -82,8 +105,8 @@
     // b["ID"]= 1; // [ ID = 1 ]
     // a.push(b); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ], [ ID = 1 ] ]
     // a.unique("ID"); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ] ]
-    if(typeof Array.prototype.unique !== 'function')
-        Array.prototype.unique = function(keyUnique){
+if(typeof Array.prototype.unique !== 'function')
+    Array.prototype.unique = function(keyUnique){
             var keyUnique = keyUnique || null;
 
             if( keyUnique === null )
@@ -195,192 +218,317 @@
         };
 
 // variables
-    var
-        // window - private var
-        window = window || this,
+var
+    // window - private var
+    window = window || this,
 
-        // document - private var
-        doc = window.document || this.document || document,
+    // document - private var
+    doc = window.document || this.document || document,
 
-        // global variable - public var for private use in window.gVar
-        gVar = window.gVar || (window.gVar = gVar = {}),
+    // global variable - public var for private use in window.gVar
+    gVar = window.gVar || (window.gVar = gVar = {}),
 
-        // global jQuery - private var
-        globaljQuery = window["jQuery"] || new Function("return false"),
+    // global jQuery - private var
+    globaljQuery = window["jQuery"] || new Function("return false"),
 
-        // engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
-        version = '1.0.0',
+    // engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
+    version = '1.0.0',
 
-        // prototypes of objects - public var in _z.privates.protos
-        protos = {
-            object: Object.prototype,
-            element: Element.prototype,
-            array: Array.prototype,
-            likeArray: {
-                push: [].push,
-                sort: [].sort,
-                splice: [].splice
-            },
-
-            // default Object Prop
-            objectProp: {
-                enumerable: false,
-                configurable: false,
-                writable: false
-            },
+    // prototypes of objects - public var in _z.privates.protos
+    protos = {
+        object: Object.prototype,
+        element: Element.prototype,
+        array: Array.prototype,
+        likeArray: {
+            push: [].push,
+            sort: [].sort,
+            splice: [].splice
         },
 
-        // is `elm` instanceof _z - public function in _z.is_z( Object ) = true|false
-        is_z = function( elm ) { return elm instanceof _z; },
-
-        // is _z prototype - public function in _z.isCore( Object ) = true|false
-        isCore = function( elm ) { return _z===elm && elm.prototype === _z.prototype; },
-
-        // `val` in `obj` - public function in _z.hasProp( Object, Property), _z(Object).hasProp(Property) = true | false
-        hasProp = function hasProp( obj, val ) {
-            return protos.object.hasOwnProperty.call(
-                (arguments.length===1 ? this : obj),
-                (arguments.length===1 ? obj : val)
-            );
+        // default Object Prop
+        objectProp: {
+            enumerable: false,
+            configurable: false,
+            writable: false
         },
+    },
 
-        // isset `val` - public function in _z.isset(var) = true|false
-        isset = function isset( val ) {
-            if( arguments.length > 1 )
-                for(var i=0, i2=arguments.length; i<i2; i++ )
-                    if( !!!isset(arguments[i]) ) return false;
+    // is `elm` instanceof _z - public function in _z.is_z( Object ) = true|false
+    is_z = function( elm ) { return elm instanceof _z; },
 
-            return val !== void 0 || typeof(val) !== 'undefined';
-        },
+    // is _z prototype - public function in _z.isCore( Object ) = true|false
+    isCore = function( elm ) { return _z===elm && elm.prototype === _z.prototype; },
 
-        // trim prototype - public function in _z.trim( String ) = trimmed String
-        triming = (String.prototype.trim&&String.prototype.trim || function trimString(str) {
-            return (str||this).replace(/^\s+/, '').replace(/\s+$/, '');
-        }),
+    // `val` in `obj` - public function in _z.hasProp( Object, Property), _z(Object).hasProp(Property) = true | false
+    hasProp = function hasProp( obj, val ) {
+        return Object.prototype.hasOwnProperty.call(
+            (arguments.length===1 ? this : obj),
+            (arguments.length===1 ? obj : val)
+        );
+    },
 
-        // type of `val` as string toLowerCase
-        TOV = function typeOfVar( val ) {
-            return protos.object.toString.call( val ).replaceAll( '[object ', '').replaceAll( ']', '').trim();
-        },
+    // all `val` in `obj` - function in fns.getProtos( Object ), hooked to Objects: Object.getProtos()
+    getProtos = Object.getPrototypeOf,
 
-        typeOfVar = function type( val ) { return TOV( val ).toLowerCase(); },
+    // isset `val` - public function in _z.isset(var) = true|false
+    isset = function isset( val ) {
+        if( arguments.length > 1 )
+            for(var i=0, i2=arguments.length; i<i2; i++ )
+                if( !!!isset(arguments[i]) ) return false;
 
-        // to avoid calling twice typeOfVar
-        varsType = {
-            "n": "number",
-            "s": "string",
-            "a": "array",
-            "o": "object",
-            "f": "function",
-            "b": "boolean",
-        },
+        return val !== void 0 || typeof(val) !== 'undefined';
+    },
 
-        // toLowerCase
-        toLC = function( $var, $reDefine ) {
-            if( typeOfVar($var)==varsType.a ) {
-                if( !isset($reDefine) )
-                    $var2 = Array.from($var),
-                        $var = $var2;
+    // trim prototype - public function in _z.trim( String ) = trimmed String
+    triming = (String.prototype.trim&&String.prototype.trim || function trimString(str) {
+        return (str||this).replace(/^\s+/, '').replace(/\s+$/, '');
+    }),
 
-                return foreach($var, function(k, v) {
-                    $var[k] = toLC(v);
-                }), $var;
+    // type of `val` as string toLowerCase
+    TOV = function typeOfVar( val ) {
+        return protos.object.toString.call( val ).replaceAll( '[object ', '').replaceAll( ']', '').trim();
+    },
+
+    typeOfVar = function type( val ) { return TOV( val ).toLowerCase(); },
+
+    // to avoid calling twice typeOfVar
+    varsType = {
+        "n": "number",
+        "s": "string",
+        "a": "array",
+        "o": "object",
+        "f": "function",
+        "b": "boolean",
+    },
+
+    // toLowerCase
+    toLC = function( $var, $reDefine ) {
+        if( typeOfVar($var)==varsType.a ) {
+            if( !isset($reDefine) )
+                $var2 = Array.from($var),
+                    $var = $var2;
+
+            return foreach($var, function(k, v) {
+                $var[k] = toLC(v);
+            }), $var;
+        }
+
+        return (String( $var ) || "").toLowerCase();
+    },
+    // toUpperCase
+    toUC = function( $var, $reDefine ) {
+        if( typeOfVar($var)==varsType.a ) {
+            if( !isset($reDefine) )
+                $var2 = Array.from($var),
+                    $var = $var2;
+
+            return foreach($var, function(k, v) {
+                $var[k] = toUC(v);
+            }), $var;
+        }
+
+        return (String( $var ) || "").toUpperCase();
+    },
+
+    // for stop loops
+    stopLoopinException = new Error("stopLoopinException"),
+
+    // forEach
+    foreach = function foreach( obj, cb, context ) {
+        if( typeOfVar( obj ) == varsType.f ) {
+            context = cb;
+            cb = obj;
+            obj = this['element']&&this.element() || [];
+        }
+
+        obj = obj || false;
+        if( !!!obj || !!!cb || typeOfVar( cb ) != varsType.f )
+            return false;
+
+        obj = is_z( obj ) ? obj.element() : obj;
+        if( typeof stopLoopinException == "undefined" ) {
+            var stopLoopinException = new Error("stopLoopinException");
+        }
+
+        var returns =
+            (
+                (typeOfVar( obj )==varsType.a&&[])||
+                (typeOfVar( obj )==varsType.o&&{})||
+                (_z['createAs']&&_z.createAs( obj ))
+            )||{};
+
+        try {
+            var _keys = Object.keys( obj );
+
+            for( var i = 0, l = _keys.length; i < l ; i++ ) {
+                var key = _keys[ i ];
+                var cbReturn = cb.apply(context||obj, [ key, obj[ key ], obj]);
+
+                if( !!!cbReturn && cbReturn != undefined )
+                    throw stopLoopinException;
+                else if( cbReturn != undefined )
+                    returns[ key ] = cbReturn;
+                else
+                    returns[ key ] = obj[ key ];
             }
+        } catch(e) {
+            if(e !== stopLoopinException) throw e;
+        }
 
-            return (String( $var ) || "").toLowerCase();
+        return returns;
+    },
+
+    // toArray
+    toArray = function toArray() {
+        var sliced = ( sliced = protos.array.slice.call( arguments.length&&arguments[0] || this ) ).length&&sliced || [];
+
+        arguments.length &&
+        !sliced.length &&
+        !is_z( arguments[0] ) &&[
+            'number', 'object', 'function'
+        ].includes( typeOfVar(arguments[0]) ) &&
+        ( sliced = [ arguments[0] ] );
+
+        return sliced;
+    },
+
+    // subArray
+    subArray = function subArray( startFrom, endTo, array ) {
+        if( endTo&&!isset(array) )
+            if( typeOfVar(endTo)!=varsType.n )
+                array = endTo,
+                    endTo = false;
+        var sliceit = [startFrom || 0];
+        if( endTo!==false )
+            sliceit.push( endTo );
+
+        return toArray( fns.turn( array, this ) ).slice(...sliceit);
+    },
+
+    // filterArray
+    filterArray = function filterArray( array, callback ) {
+        var ArgLen = arguments.length || 0;
+        var tunning = fns.turny({
+            arg: arguments,
+            self: this,
+            last: undefined
+        });
+        tunning = tunning.call(tunning, 'end');
+        array = tunning[0] || undefined;
+        callback = tunning[1] || undefined;
+        if( isset(tunning[2]) && _z.isFunction(tunning[2]) )
+            callback = tunning[2] || callback;
+
+        if( isset(callback) && !_z.isFunction(callback) ) {
+            var _callback = _z( callback );
+            callback = (x)=>_z(x).is( _callback );
+        }
+
+        arguments = tunning || [];
+        var filterElements = false;
+        if( _z.isFunction( array ) && !isset(callback) && is_z(this) )
+            callback = array,
+                array = this.element(),
+                filterElements = true;
+
+        if( is_z(this) )
+            array = this.element(),
+                filterElements = true;
+
+        if( isset(array) ) array = _z( array ).element();
+
+        callback = _z.isFunction(callback)&&callback || function( x ) { return x; };
+        var result = protos.array.filter.apply( array, [callback] ) || array;
+
+        if( filterElements && is_z(this) ) {
+            var newInstance = this.newSelector( result );
+            newInstance.args = [ array ];
+            newInstance.selector = "";
+
+            return newInstance;
+        } else return _z( result );
+    },
+
+    // vanillas shortcuts
+    vanilla = function getVanillas( $var ) {
+        return ( isset($var) ? _vanilla[ $var ] : _vanilla);
+    },
+
+    _vanilla = {
+        vanilla: vanilla,
+        window: window,
+        document: doc,
+        body: doc.body,
+        root: doc.getRootNode.bind(doc),
+        head: doc.head,
+        title: doc.title,
+
+        compStyle: (window.getComputedStyle || getComputedStyle),
+
+        byID: doc.getElementById.bind(doc),
+        byClass: doc.getElementsByClassName.bind(doc),
+        byName: doc.getElementsByName.bind(doc),
+        byTag: doc.getElementsByTagName.bind(doc),
+
+        w: doc.write.bind(doc),
+        wln: doc.writeln.bind(doc),
+
+        qsa: doc.querySelectorAll.bind(doc),
+        qs: doc.querySelector.bind(doc),
+
+        elm: doc.createElement.bind(doc),
+        attr: doc.createAttribute.bind(doc),
+        comment: doc.createComment.bind(doc),
+    },
+
+    // clone object
+    cloneObj = function cloneObj( obj ) {
+        try {
+            var copy = Object.create( getProtos( obj ) ),
+                propNames = Object.getOwnPropertyNames( obj );
+
+            propNames.forEach(function( name ) {
+                var desc = Object.getOwnPropertyDescriptor( obj, name );
+                Object.defineProperty( copy, name, desc );
+            });
+
+            return copy;
+        } catch(e) {
+            console.error( e );
+            return obj;
+        }
+    },
+
+    // Element.matches function
+    matchesFunction = protos.element.matches ||
+        protos.element.matchesSelector ||
+        protos.element.mozMatchesSelector ||
+        protos.element.msMatchesSelector ||
+        protos.element.oMatchesSelector ||
+        protos.element.webkitMatchesSelector ||
+        function( s ) {
+            var _matches = (this.document || this.ownerDocument).querySelectorAll( s ),
+                i = _matches.length;
+            while (--i >= 0 && _matches.item( i ) !== this) {}
+            return i > -1;
         },
-        // toUpperCase
-        toUC = function( $var, $reDefine ) {
-            if( typeOfVar($var)==varsType.a ) {
-                if( !isset($reDefine) )
-                    $var2 = Array.from($var),
-                        $var = $var2;
 
-                return foreach($var, function(k, v) {
-                    $var[k] = toUC(v);
-                }), $var;
-            }
-
-            return (String( $var ) || "").toUpperCase();
-        },
-
-        // for stop loops
-        stopLoopinException = new Error("stopLoopinException"),
-
-        // forEach
-        foreach = function foreach( obj, cb, context ) {
-            if( typeOfVar( obj ) == varsType.f ) {
-                context = cb;
-                cb = obj;
-                obj = this['element']&&this.element() || [];
-            }
-
-            obj = obj || false;
-            if( !!!obj || !!!cb || typeOfVar( cb ) != varsType.f )
-                return false;
-
-            obj = is_z( obj ) ? obj.element() : obj;
-            if( typeof stopLoopinException == "undefined" ) {
-                var stopLoopinException = new Error("stopLoopinException");
-            }
-
-            var returns =
-                (
-                    (typeOfVar( obj )==varsType.a&&[])||
-                    (typeOfVar( obj )==varsType.o&&{})||
-                    (_z['createAs']&&_z.createAs( obj ))
-                )||{};
-
+    // elements functions
+    elmFunc = {
+        // Element.matches() polyfill
+        matches: function elementMatches() {
+            var element = arguments[0] || false,
+                arg = subArray( 1, arguments );
             try {
-                var _keys = Object.keys( obj );
-
-                for( var i = 0, l = _keys.length; i < l ; i++ ) {
-                    var key = _keys[ i ];
-                    var cbReturn = cb.apply(context||obj, [ key, obj[ key ], obj]);
-
-                    if( !!!cbReturn && cbReturn != undefined )
-                        throw stopLoopinException;
-                    else if( cbReturn != undefined )
-                        returns[ key ] = cbReturn;
-                    else
-                        returns[ key ] = obj[ key ];
-                }
-            } catch(e) {
-                if(e !== stopLoopinException) throw e;
+                return matchesFunction.apply( element, arg );
+            } catch(e1) {
+                console.error(e1);
+                return false;
             }
-
-            return returns;
         },
 
-        // toArray
-        toArray = function toArray() {
-            var sliced = ( sliced = protos.array.slice.call( arguments.length&&arguments[0] || this ) ).length&&sliced || [];
-
-            arguments.length &&
-            !sliced.length &&
-            !is_z( arguments[0] ) &&[
-                'number', 'object', 'function'
-            ].includes( typeOfVar(arguments[0]) ) &&
-            ( sliced = [ arguments[0] ] );
-
-            return sliced;
-        },
-
-        // subArray
-        subArray = function subArray( startFrom, endTo, array ) {
-            if( endTo&&!isset(array) )
-                if( typeOfVar(endTo)!=varsType.n )
-                    array = endTo,
-                        endTo = false;
-            var sliceit = [startFrom || 0];
-            if( endTo!==false )
-                sliceit.push( endTo );
-
-            return toArray( fns.turn( array, this ) ).slice(...sliceit);
-        },
-
-        // filterArray
-        filterArray = function filterArray( array, callback ) {
+        // Element.matchesAll() polyfill
+        matchesAll: function elementMatchesAll( elm, $elm, $not ) {
             var ArgLen = arguments.length || 0;
             var tunning = fns.turny({
                 arg: arguments,
@@ -388,982 +536,861 @@
                 last: undefined
             });
             tunning = tunning.call(tunning, 'end');
-            array = tunning[0] || undefined;
-            callback = tunning[1] || undefined;
-            if( isset(tunning[2]) && _z.isFunction(tunning[2]) )
-                callback = tunning[2] || callback;
+            elm = tunning[0] || undefined;
+            $elm = tunning[1] || undefined;
+            $not = tunning[2] || false;
 
-            if( isset(callback) && !_z.isFunction(callback) ) {
-                var _callback = _z( callback );
-                callback = (x)=>_z(x).is( _callback );
-            }
-
-            arguments = tunning || [];
-            var filterElements = false;
-            if( _z.isFunction( array ) && !isset(callback) && is_z(this) )
-                callback = array,
-                    array = this.element(),
-                    filterElements = true;
-
-            if( is_z(this) )
-                array = this.element(),
-                    filterElements = true;
-
-            if( isset(array) ) array = _z( array ).element();
-
-            callback = _z.isFunction(callback)&&callback || function( x ) { return x; };
-            var result = protos.array.filter.apply( array, [callback] ) || array;
-
-            if( filterElements && is_z(this) ) {
-                var newInstance = this.newSelector( result );
-                newInstance.args = [ array ];
-                newInstance.selector = "";
-
-                return newInstance;
-            } else return _z( result );
-        },
-
-        // vanillas shortcuts
-        vanilla = function getVanillas( $var ) {
-            return ( isset($var) ? _vanilla[ $var ] : _vanilla);
-        },
-
-        _vanilla = {
-            vanilla: vanilla,
-            window: window,
-            document: doc,
-            body: doc.body,
-            root: doc.getRootNode.bind(doc),
-            head: doc.head,
-            title: doc.title,
-
-            compStyle: (window.getComputedStyle || getComputedStyle),
-
-            byID: doc.getElementById.bind(doc),
-            byClass: doc.getElementsByClassName.bind(doc),
-            byName: doc.getElementsByName.bind(doc),
-            byTag: doc.getElementsByTagName.bind(doc),
-
-            w: doc.write.bind(doc),
-            wln: doc.writeln.bind(doc),
-
-            qsa: doc.querySelectorAll.bind(doc),
-            qs: doc.querySelector.bind(doc),
-
-            elm: doc.createElement.bind(doc),
-            attr: doc.createAttribute.bind(doc),
-            comment: doc.createComment.bind(doc),
-        },
-
-        // clone object
-        cloneObj = function cloneObj( obj ) {
-            try {
-                var copy = Object.create( Object.getPrototypeOf( obj ) ),
-                    propNames = Object.getOwnPropertyNames( obj );
-
-                propNames.forEach(function( name ) {
-                    var desc = Object.getOwnPropertyDescriptor( obj, name );
-                    Object.defineProperty( copy, name, desc );
-                });
-
-                return copy;
-            } catch(e) {
-                console.error( e );
-                return obj;
-            }
-        },
-
-        // Element.matches function
-        matchesFunction = protos.element.matches ||
-            protos.element.matchesSelector ||
-            protos.element.mozMatchesSelector ||
-            protos.element.msMatchesSelector ||
-            protos.element.oMatchesSelector ||
-            protos.element.webkitMatchesSelector ||
-            function( s ) {
-                var _matches = (this.document || this.ownerDocument).querySelectorAll( s ),
-                    i = _matches.length;
-                while (--i >= 0 && _matches.item( i ) !== this) {}
-                return i > -1;
-            },
-
-        // elements functions
-        elmFunc = {
-            // Element.matches() polyfill
-            matches: function elementMatches() {
-                var element = arguments[0] || false,
-                    arg = subArray( 1, arguments );
-                try {
-                    return matchesFunction.apply( element, arg );
-                } catch(e1) {
-                    console.error(e1);
-                    return false;
-                }
-            },
-
-            // Element.matchesAll() polyfill
-            matchesAll: function elementMatchesAll( elm, $elm, $not ) {
-                var ArgLen = arguments.length || 0;
-                var tunning = fns.turny({
-                    arg: arguments,
-                    self: this,
-                    last: undefined
-                });
-                tunning = tunning.call(tunning, 'end');
-                elm = tunning[0] || undefined;
-                $elm = tunning[1] || undefined;
-                $not = tunning[2] || false;
-
-                if( arguments.length==1 )
-                    $elm = elm,
-                        elm = this;
-
-                var $return = [];
-                if( arguments.length )  {
-                    $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
-
-                    elmFunc.elmLoop( elm, function( e ) {
-                        var $currentElement = [];
-                        elmFunc.elmLoop( _z( $elm ), function( e2 ) {
-
-                            if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))==varsType.s )
-                                $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
-                            else
-                                $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
-
-                        }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
-
-                        if( filterArray( $currentElement ).length === $elm.length ) $return.push( e );
-                    }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
-
-                    $return = filterArray( $return );
-                }
-
-                if( is_z(this) ) {
-                    var newInstance = this.newSelector( $return );
-                    newInstance.args = arguments;
-                    newInstance.selector = $elm;
-
-                    return newInstance;
-                }
-                else return _z( $return );
-            },
-
-            // prepare css style
-            prepareCSS: function prepareCSS( css ) {
-                if( _z.is_z( css ) )
-                    return (_z.trim(css)||"").replace( /^-ms-/, "ms-" ).replace( /-([\da-z])/gi, ( all, fst)=>fst.toUpperCase() ) || "";
-
-                var s = {};
-                if( !!!css ) return s;
-
-                if( css instanceof CSSStyleDeclaration ) {
-                    for( var i in css )
-                        if( (css[i]).toLowerCase )
-                            if( !!css[ css[i] ] || css[ css[i] ] == "" )
-                                s[ (css[i]).toLowerCase() ] = ( css[ css[i] ] );
-
-                } else if( typeof css == "string" ) {
-                    css = css.split("; ");
-                    for( var i in css )
-                        if( css[i] && typeof css[i]!='object' && typeof css[i]!='function' )
-                            try {
-                                var l = css[i].split(": ");
-                                if( !!l[1] || l[1] == "" )
-                                    s[ l[0].toLowerCase() ] = ( l[1] );
-                            } catch(e) {
-                                console.warn( [ css[i], !!!css[i] ] );
-                            }
-                }
-
-                return s;
-            },
-
-            // set or get element prop
-            elmLoop: function elmLoop( elm, callback, tester ) {
-                if( !!!elm )
+            if( arguments.length==1 )
+                $elm = elm,
                     elm = this;
 
-                if( !!!_z.is_z( elm ) )
-                    elm = _z( elm );
+            var $return = [];
+            if( arguments.length )  {
+                $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
 
-                if( !!!callback || !_z.isFunction( callback ))
-                    callback = fns.ef;
-
-                var $results = [];
-                if( elm.length ) {
-                    var $this = this,
-                        tester = tester&&_z.isFunction(tester) ? tester : (x)=>_z(x).isDOMElement( true );
-                    if( elm.length == 1 && (e = elm[0]) ) {
-                        if( tester(e) )
-                            ( $results.pushSetter = callback.apply( $this, [ e, 0 ]) );
-                    } else
-                        elm.each(function( i, e ){
-                            if( tester(e) )
-                                return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
-                        });
-                }
-
-                return $results;
-            },
-
-            // insert adjacent element
-            insertAdjacentElement: function insertElement( $val, $q ) {
-                if( !isset( $val ) || ( !_z.is_z( $val ) && !_z.isDOM( $val ) && !_z.isString( $val ) ) || !this.length )
-                    return this;
-
-                if( ( _z.isDOM($val)||!_z.is_z($val) ) && !_z.isTypes( 'str', $val) )
-                    $val = _z($val);
-
-                var elm = this,
-                    $q = $q || 'beforebegin';
                 elmFunc.elmLoop( elm, function( e ) {
-                    if( !e['insertAdjacentElement'] ) return;
+                    var $currentElement = [];
+                    elmFunc.elmLoop( _z( $elm ), function( e2 ) {
 
-                    if( !_z.isString( $val ) )
-                        $val.for( function( key, value ) {
-                            if( _z.isDOM( value ) ) e['insertAdjacentElement']( $q, value );
-                        });
-                    else
-                        e['insertAdjacentHTML']( $q, $val );
-                });
+                        if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))==varsType.s )
+                            $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
+                        else
+                            $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
 
-                return this;
-            },
+                    }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
 
-            // fade element/s
-            fade: function fadeElement( $q, speed, callback ) {
-                var elm = this,
-                    $q = $q || 'In',
-                    opacity = false;
+                    if( filterArray( $currentElement ).length === $elm.length ) $return.push( e );
+                }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
 
-                if( $q == 'To' ) {
-                    if( _z.isNumber(callback) ) {
-                        opacity = callback > 1 ? 1 : (callback < 0 ? 0 : callback);
-                        callback = false;
-                    }
+                $return = filterArray( $return );
+            }
 
-                    if( arguments.length == 4 && _z.isFunction(arguments[3]) ) callback = arguments[3];
+            if( is_z(this) ) {
+                var newInstance = this.newSelector( $return );
+                newInstance.args = arguments;
+                newInstance.selector = $elm;
 
-                    if( _z.isNumber(opacity) ) $q = elm.css( 'opacity' ) > opacity ? "Out" : "In";
-                }
-
-                if( _z.eff === false ) return this;
-
-                if( opacity === false )
-                    elm.css( 'opacity', elmFunc.fadeOpacityValue[ $q ] );
-
-                var tick = function() {
-                    // check if other fade on this element
-                    if( (_z.size( gVar[ 'fade' ] ) &&
-                        gVar[ 'fade' ][ 'tick' ] != tick &&
-                        gVar[ 'fade' ][ 'elm' ] == tick.elm) || _z.eff === false
-                    ) return false;
-
-                    var fstElement = tick.elm.element(0);
-
-                    tick.opacity = tick.q=='In'?
-                        ( +(tick.opacity)+(tick.lastVal) ) :
-                        ( +(tick.opacity)-(tick.lastVal) );
-                    tick.elm.css( 'opacity', tick.opacity);
-                    tick.last = +new Date();
-
-                    var doFade = tick.fadeTo!==false ?
-                        ((tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < tick.fadeTo) ||
-                            (tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > tick.fadeTo))
-                        :
-                        ((tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < 1) ||
-                            (tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > 0));
-
-                    if(
-                        _z.eff !== false && gVar[ 'fadeStatus' ] !== false &&
-                        doFade
-                    ) {
-                        setTimeout(function(){
-                            (gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) ||
-                            (gVar['fade'].timeOut=setTimeout(tick, tick.speed))
-                        }, 16);
-                    } else {
-                        if( tick.fadeTo===false )
-                            elm.css( 'opacity', +!elmFunc.fadeOpacityValue[ tick.q ] );
-                        gVar[ 'fade' ] = {};
-
-                        if( tick.q == 'Out' && tick.fadeTo===false ) tick.elm.hide();
-
-                        if( _z.isFunction(tick.callback) )
-                            tick.callback.call(elm, elm);
-                    }
-                };
-
-                tick.q = $q;
-                tick.last = +new Date();
-                tick.elm = elm;
-                tick.speed = parseInt(speed)||1000;
-                tick.lastVal = ((1/ ((tick.speed/700)||1) )/10)||0.25;
-                tick.opacity = opacity === false ? elmFunc.fadeOpacityValue[ $q ] : Number(elm.css( 'opacity' ));
-                tick.fadeTo = opacity !== false ? opacity : false;
-                tick.callback = _z.isFunction(callback) ? callback : false;
-
-                // check if other fade on this element
-                if( _z.eff === false || gVar[ 'fadeStatus' ] === false || (
-                    isset(gVar[ 'fade' ]) && _z.size(gVar[ 'fade' ]) &&
-                    gVar[ 'fade' ][ 'tick' ] != tick &&
-                    gVar[ 'fade' ][ 'elm' ] == tick.elm )
-                ) {
-                    if( gVar[ 'fade' ][ 'aftimeOut' ] )
-                        cancelAnimationFrame( gVar[ 'fade' ][ 'aftimeOut' ] );
-                    else if( gVar[ 'fade' ][ 'timeOut' ] )
-                        clearTimeout( gVar[ 'fade' ][ 'timeOut' ] );
-                }
-
-                gVar[ 'fade' ] = gVar[ 'fade' ] || {};
-                gVar[ 'fade' ][ 'tick' ] = tick;
-                gVar[ 'fade' ][ 'elm' ] = tick.elm;
-
-                if( $q == 'In' && opacity === false ) elm.show();
-
-                tick();
-                return this;
-            },
-
-            // opacity default values
-            fadeOpacityValue: { In:0, Out:1 },
-
+                return newInstance;
+            }
+            else return _z( $return );
         },
-        // addEventListener
-        registerEvent = function eventListenerHandler( target, type, callback ) {
-            var listenerMethod = target.addEventListener || target.attachEvent,
-                eventName = target.addEventListener ? type : 'on' + type;
 
-            var registerData = {
-                element: callback['element']||target,
-                eventName: callback['eventName']||type,
-                qselector: callback['qselector']||"",
-                _callback: callback['_callback']||callback['callback']||"",
-                callback: callback['callback']||false
+        // prepare css style
+        prepareCSS: function prepareCSS( css ) {
+            if( _z.is_z( css ) )
+                return (_z.trim(css)||"").replace( /^-ms-/, "ms-" ).replace( /-([\da-z])/gi, ( all, fst)=>fst.toUpperCase() ) || "";
+
+            var s = {};
+            if( !!!css ) return s;
+
+            if( css instanceof CSSStyleDeclaration ) {
+                for( var i in css )
+                    if( (css[i]).toLowerCase )
+                        if( !!css[ css[i] ] || css[ css[i] ] == "" )
+                            s[ (css[i]).toLowerCase() ] = ( css[ css[i] ] );
+
+            } else if( typeof css == "string" ) {
+                css = css.split("; ");
+                for( var i in css )
+                    if( css[i] && typeof css[i]!='object' && typeof css[i]!='function' )
+                        try {
+                            var l = css[i].split(": ");
+                            if( !!l[1] || l[1] == "" )
+                                s[ l[0].toLowerCase() ] = ( l[1] );
+                        } catch(e) {
+                            console.warn( [ css[i], !!!css[i] ] );
+                        }
+            }
+
+            return s;
+        },
+
+        // set or get element prop
+        elmLoop: function elmLoop( elm, callback, tester ) {
+            if( !!!elm )
+                elm = this;
+
+            if( !!!_z.is_z( elm ) )
+                elm = _z( elm );
+
+            if( !!!callback || !_z.isFunction( callback ))
+                callback = fns.ef;
+
+            var $results = [];
+            if( elm.length ) {
+                var $this = this,
+                    tester = tester&&_z.isFunction(tester) ? tester : (x)=>_z(x).isDOMElement( true );
+                if( elm.length == 1 && (e = elm[0]) ) {
+                    if( tester(e) )
+                        ( $results.pushSetter = callback.apply( $this, [ e, 0 ]) );
+                } else
+                    elm.each(function( i, e ){
+                        if( tester(e) )
+                            return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
+                    });
+            }
+
+            return $results;
+        },
+
+        // insert adjacent element
+        insertAdjacentElement: function insertElement( $val, $q ) {
+            if( !isset( $val ) || ( !_z.is_z( $val ) && !_z.isDOM( $val ) && !_z.isString( $val ) ) || !this.length )
+                return this;
+
+            if( ( _z.isDOM($val)||!_z.is_z($val) ) && !_z.isTypes( 'str', $val) )
+                $val = _z($val);
+
+            var elm = this,
+                $q = $q || 'beforebegin';
+            elmFunc.elmLoop( elm, function( e ) {
+                if( !e['insertAdjacentElement'] ) return;
+
+                if( !_z.isString( $val ) )
+                    $val.for( function( key, value ) {
+                        if( _z.isDOM( value ) ) e['insertAdjacentElement']( $q, value );
+                    });
+                else
+                    e['insertAdjacentHTML']( $q, $val );
+            });
+
+            return this;
+        },
+
+        // fade element/s
+        fade: function fadeElement( $q, speed, callback ) {
+            var elm = this,
+                $q = $q || 'In',
+                opacity = false;
+
+            if( $q == 'To' ) {
+                if( _z.isNumber(callback) ) {
+                    opacity = callback > 1 ? 1 : (callback < 0 ? 0 : callback);
+                    callback = false;
+                }
+
+                if( arguments.length == 4 && _z.isFunction(arguments[3]) ) callback = arguments[3];
+
+                if( _z.isNumber(opacity) ) $q = elm.css( 'opacity' ) > opacity ? "Out" : "In";
+            }
+
+            if( _z.eff === false ) return this;
+
+            if( opacity === false )
+                elm.css( 'opacity', elmFunc.fadeOpacityValue[ $q ] );
+
+            var tick = function() {
+                // check if other fade on this element
+                if( (_z.size( gVar[ 'fade' ] ) &&
+                    gVar[ 'fade' ][ 'tick' ] != tick &&
+                    gVar[ 'fade' ][ 'elm' ] == tick.elm) || _z.eff === false
+                ) return false;
+
+                var fstElement = tick.elm.element(0);
+
+                tick.opacity = tick.q=='In'?
+                    ( +(tick.opacity)+(tick.lastVal) ) :
+                    ( +(tick.opacity)-(tick.lastVal) );
+                tick.elm.css( 'opacity', tick.opacity);
+                tick.last = +new Date();
+
+                var doFade = tick.fadeTo!==false ?
+                    ((tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < tick.fadeTo) ||
+                        (tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > tick.fadeTo))
+                    :
+                    ((tick.q=='In' && +(_z(fstElement).css( 'opacity' )) < 1) ||
+                        (tick.q=='Out' && +(_z(fstElement).css( 'opacity' )) > 0));
+
+                if(
+                    _z.eff !== false && gVar[ 'fadeStatus' ] !== false &&
+                    doFade
+                ) {
+                    setTimeout(function(){
+                        (gVar['fade'].aftimeOut=( window.requestAnimationFrame && requestAnimationFrame( tick ) )) ||
+                        (gVar['fade'].timeOut=setTimeout(tick, tick.speed))
+                    }, 16);
+                } else {
+                    if( tick.fadeTo===false )
+                        elm.css( 'opacity', +!elmFunc.fadeOpacityValue[ tick.q ] );
+                    gVar[ 'fade' ] = {};
+
+                    if( tick.q == 'Out' && tick.fadeTo===false ) tick.elm.hide();
+
+                    if( _z.isFunction(tick.callback) )
+                        tick.callback.call(elm, elm);
+                }
             };
 
-            var arg = [ eventName, registerData['_callback']||registerData['callback'] ];
-            if( target.addEventListener )
-                arg.push( false );
+            tick.q = $q;
+            tick.last = +new Date();
+            tick.elm = elm;
+            tick.speed = parseInt(speed)||1000;
+            tick.lastVal = ((1/ ((tick.speed/700)||1) )/10)||0.25;
+            tick.opacity = opacity === false ? elmFunc.fadeOpacityValue[ $q ] : Number(elm.css( 'opacity' ));
+            tick.fadeTo = opacity !== false ? opacity : false;
+            tick.callback = _z.isFunction(callback) ? callback : false;
 
-            return registeredEvents.add(registerData), listenerMethod.apply(target, arg );
-        },
-        // removeEventListener
-        unRegisterEvent = function eventUnListenerHandler( target, type, callback ) {
-            var removeMethod = target.removeEventListener || target.detachEvent,
-                eventName = target.removeEventListener ? type : 'on' + type;
-
-            return removeMethod.call(target, eventName, callback );
-        },
-        // all registeredEvents
-        registeredEvents = {
-            events: {},
-            find: function findRegisteredEvents( fn ){
-                var ev = this.events,
-                    $return = [];
-
-                _z.for( ev, function( k, v ) {
-                    if( _z.isFunction(fn) && v['realcallback'] && v['realcallback']==fn)
-                        $return.push( v );
-                    else if( _z.isObject( fn ) ) {
-                        var $return2={};
-                        _z.for( fn, function( $k, $v ) {
-                            if( v[$k] != $v)
-                                return $return2=false, false;
-                            else
-                                $return2[ $k ] = $v;
-                        });
-                        if( $return2 !== false ) $return.push( v );
-                    }
-                });
-
-                return $return || false;
-            },
-            add: function addRegisteredEvents( e, eventName, qselector, _callback, callback, element ) {
-                var data = arguments.length==1&&typeOfVar(e)==varsType.o ? e : false;
-                if( data )
-                    e = data['element'] || false;
-
-                var element = element || data['element'] || e || doc,
-                    eventName = eventName || data['eventName'],
-                    qselector = qselector || data['qselector'],
-                    _callback = _callback || data['_callback'],
-                    callback = callback || data['callback'];
-
-                var fName = 'cb'+fns.time();
-                while( isset(this.events[ fName ]) )
-                    fName = 'cb'+fns.time()+'_'+ _z.size( this.events );
-
-                this.events[ fName ] = {
-                    element: element,
-                    name: data['eventName'] || eventName,
-                    qselector: data['qselector'] || qselector,
-                    callback: data['_callback'] || _callback,
-                    remover: function(){
-                        unRegisterEvent( element, (data['eventName'] || eventName), _callback );
-                        delete registeredEvents.events[ fName ];
-                    },
-                    realcallback: callback
-                };
-
-                return this.events[ fName ]['callback'];
+            // check if other fade on this element
+            if( _z.eff === false || gVar[ 'fadeStatus' ] === false || (
+                isset(gVar[ 'fade' ]) && _z.size(gVar[ 'fade' ]) &&
+                gVar[ 'fade' ][ 'tick' ] != tick &&
+                gVar[ 'fade' ][ 'elm' ] == tick.elm )
+            ) {
+                if( gVar[ 'fade' ][ 'aftimeOut' ] )
+                    cancelAnimationFrame( gVar[ 'fade' ][ 'aftimeOut' ] );
+                else if( gVar[ 'fade' ][ 'timeOut' ] )
+                    clearTimeout( gVar[ 'fade' ][ 'timeOut' ] );
             }
-        },
-        // parse functions
-        parssing = {
-            // parseHTML
-            html: function() { return parssing.parseHTML.apply(parssing, arguments); },
-            parseHTML: function parseHTML( str ) {
-                try{
-                    var tmp = document.implementation.createHTMLDocument();
-                    tmp.body.innerHTML = str;
-                    return tmp.body.children;
-                } catch( _err ){ return console.error( "Parse Error[parseHTML]:", _err), false; }
-            },
-            // text to html node list
-            parseHTMLNode: function parseHTMLNode( str ) {
-                try{
-                    var tmp = document.implementation.createHTMLDocument();
-                    tmp.body.innerHTML = str;
-                    return tmp.body.childNodes;
-                } catch( _err ){ console.error( "Parse Error[parseHTMLNode]:", _err); }
-            },
 
-            // parseJSON
-            json: function() { return parssing.parseJSON.apply(parssing, arguments); },
-            parseJSON: function parseJSON( str ) {
-                try{
-                    return JSON.parse( str );
-                } catch( _err ){ console.error( "Parse Error[parseJSON]:", _err); }
-            },
+            gVar[ 'fade' ] = gVar[ 'fade' ] || {};
+            gVar[ 'fade' ][ 'tick' ] = tick;
+            gVar[ 'fade' ][ 'elm' ] = tick.elm;
 
-            // JSON.stringify
-            stringJSON: function() { return parssing.unjson.apply(parssing, arguments); },
-            unjson: function JSONstringify( str ) {
-                try{
-                    return JSON.stringify( str );
-                } catch( _err ){ console.error( "Parse Error[unjson]:", _err); }
-            },
+            if( $q == 'In' && opacity === false ) elm.show();
 
-            // parseXML
-            xml: function parseXML( str ) {
-                try{
-                    var xml, parser;
-                    if( !!!str||!!!_z.isString(str) )
-                        return null;
-
-                    try {
-                        if( window.DOMParser ) {
-                            parser = new DOMParser();
-                            xml = parser.parseFromString( str, "text/xml" );
-                        } else // Internet Explorer
-                        {
-                            xml = new ActiveXObject("Microsoft.XMLDOM");
-                            xml.async = false;
-                            xml.loadXML( str );
-                        }
-                    } catch( e ) { xml = null; }
-
-                    if( !!!xml )
-                        return console.error( "Invalid XML: " + str ), null;
-
-                    return xml;
-                } catch( e ) { console.error( "Parse Error:"+ e ); }
-            },
-            parseXML: function parseXML(htmlString) {
-                return (new DOMParser()).parseFromString(htmlString,"text/xml");
-            },
-
-            // parseXML from url
-            xmlFromURL: function parseXMLFromUrl( url ) {
-                try{
-                    var xml, xmlhttp, parser;
-                    if( !!!url||!!!_z.isString(url) )
-                        return null;
-
-                    try {
-                        if( window.XMLHttpRequest ) // code for IE7+, Firefox, Chrome, Opera, Safari
-                            xmlhttp = new XMLHttpRequest();
-                        else // code for IE6, IE5
-                            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-
-                        xmlhttp.open( "GET", url, false );
-                        xmlhttp.send();
-                        xml = xmlhttp.responseXML;
-                    } catch( e ) { return console.error( "error while parssing: " + e ), null; }
-
-                    return xml;
-                } catch( e ) { console.error( "Parse Error:"+ e ); }
-            },
+            tick();
+            return this;
         },
 
-        // base64 en/decoder
-        base64 = {
-            // encoder polyfill
-            // [https://gist.github.com/999166] by [https://github.com/nignag]
-            btoa: ( window.btoa || ( window.btoa = function (input) {
-                var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-                    InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
-                    str = String(input);
-                for (
-                    // initialize result and counter
-                    var block, charCode, idx = 0, map = chars, output = '';
-                    // if the next str index does not exist:
-                    //   change the mapping table to "="
-                    //   check if d has no fractional digits
-                    str.charAt(idx | 0) || (map = '=', idx % 1);
-                    // "8 - idx % 1 * 8" generates the sequence 2, 4, 6, 8
-                    output += map.charAt( 63 & block >> 8 - idx % 1 * 8 )
-                )
-                {
-                    charCode = str.charCodeAt( idx += 3/4 );
-                    if( charCode > 0xFF )
-                        throw new InvalidCharacterError("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+        // opacity default values
+        fadeOpacityValue: { In:0, Out:1 },
 
-                    block = block << 8 | charCode;
+    },
+    // addEventListener
+    registerEvent = function eventListenerHandler( target, type, callback ) {
+        var listenerMethod = target.addEventListener || target.attachEvent,
+            eventName = target.addEventListener ? type : 'on' + type;
+
+        var registerData = {
+            element: callback['element']||target,
+            eventName: callback['eventName']||type,
+            qselector: callback['qselector']||"",
+            _callback: callback['_callback']||callback['callback']||"",
+            callback: callback['callback']||false
+        };
+
+        var arg = [ eventName, registerData['_callback']||registerData['callback'] ];
+        if( target.addEventListener )
+            arg.push( false );
+
+        return registeredEvents.add(registerData), listenerMethod.apply(target, arg );
+    },
+    // removeEventListener
+    unRegisterEvent = function eventUnListenerHandler( target, type, callback ) {
+        var removeMethod = target.removeEventListener || target.detachEvent,
+            eventName = target.removeEventListener ? type : 'on' + type;
+
+        return removeMethod.call(target, eventName, callback );
+    },
+    // all registeredEvents
+    registeredEvents = {
+        events: {},
+        find: function findRegisteredEvents( fn ){
+            var ev = this.events,
+                $return = [];
+
+            _z.for( ev, function( k, v ) {
+                if( _z.isFunction(fn) && v['realcallback'] && v['realcallback']==fn)
+                    $return.push( v );
+                else if( _z.isObject( fn ) ) {
+                    var $return2={};
+                    _z.for( fn, function( $k, $v ) {
+                        if( v[$k] != $v)
+                            return $return2=false, false;
+                        else
+                            $return2[ $k ] = $v;
+                    });
+                    if( $return2 !== false ) $return.push( v );
                 }
+            });
 
-                return output;
-            })).bind(window),
+            return $return || false;
+        },
+        add: function addRegisteredEvents( e, eventName, qselector, _callback, callback, element ) {
+            var data = arguments.length==1&&typeOfVar(e)==varsType.o ? e : false;
+            if( data )
+                e = data['element'] || false;
 
-            // decoder polyfill
-            // [https://gist.github.com/1020396] by [https://github.com/atk]
-            atob: ( window.atob || ( window.atob = function (input) {
-                var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-                    InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
-                    str = String( input ).replace(/[=]+$/, ''); // #31: ExtendScript bad parse of /=
+            var element = element || data['element'] || e || doc,
+                eventName = eventName || data['eventName'],
+                qselector = qselector || data['qselector'],
+                _callback = _callback || data['_callback'],
+                callback = callback || data['callback'];
 
-                if( str.length % 4 == 1 )
-                    throw new InvalidCharacterError("'atob' failed: The string to be decoded is not correctly encoded.");
+            var fName = 'cb'+fns.time();
+            while( isset(this.events[ fName ]) )
+                fName = 'cb'+fns.time()+'_'+ _z.size( this.events );
 
-                for (
-                    // initialize result and counters
-                    var bc = 0, bs, buffer, idx = 0, output = '';
-                    // get next character
-                    buffer = str.charAt( idx++ );
-                    // character found in table? initialize bit storage and add its ascii value;
-                    ~buffer && ( bs = bc % 4 ? bs * 64 + buffer : buffer,
-                        // and if not first of each 4 characters,
-                        // convert the first 8 bits to one ascii character
-                    bc++ % 4 ) ? output += String.fromCharCode( 255 & bs >> (-2 * bc & 6) ) : 0
-                )
-                {
-                    // try to find character in table (0-63, not found => -1)
-                    buffer = chars.indexOf( buffer );
-                }
+            this.events[ fName ] = {
+                element: element,
+                name: data['eventName'] || eventName,
+                qselector: data['qselector'] || qselector,
+                callback: data['_callback'] || _callback,
+                remover: function(){
+                    unRegisterEvent( element, (data['eventName'] || eventName), _callback );
+                    delete registeredEvents.events[ fName ];
+                },
+                realcallback: callback
+            };
 
-                return output;
-            })).bind(window),
-
-            // base64_encode
-            encode: function base64_encode( code ) {
-                return base64.btoa( unescape( encodeURIComponent( code ) ) );
-            },
-
-            // base64_decode
-            decode: function base64_decode( code ) {
-                return decodeURIComponent( escape( base64.atob( code ) ) );
-            },
+            return this.events[ fName ]['callback'];
+        }
+    },
+    // parse functions
+    parssing = {
+        // parseHTML
+        html: function() { return parssing.parseHTML.apply(parssing, arguments); },
+        parseHTML: function parseHTML( str ) {
+            try{
+                var tmp = document.implementation.createHTMLDocument();
+                tmp.body.innerHTML = str;
+                return tmp.body.children;
+            } catch( _err ){ return console.error( "Parse Error[parseHTML]:", _err), false; }
+        },
+        // text to html node list
+        parseHTMLNode: function parseHTMLNode( str ) {
+            try{
+                var tmp = document.implementation.createHTMLDocument();
+                tmp.body.innerHTML = str;
+                return tmp.body.childNodes;
+            } catch( _err ){ console.error( "Parse Error[parseHTMLNode]:", _err); }
         },
 
-        // functions ( shortcuts )
-        fns = {
-            registeredEvents: registeredEvents,
-            propertyGetter: function( cb, args ) {
-                return { get () { return cb( ...(args||[]) ); } };
-            },
-            ef: new Function(" "),
-            nan: new Function(" "),
-            inputbox: function inputbox() { return prompt.apply(window, arguments) || undefined; },
-            arg: function consoleArguments() { console.log.apply(console, arguments) },
-            trc: function consoleTrace() { console.trace.apply(console, arguments) },
-            logthis: function consoleThis() { console.log.apply(console, this) },
-            log: function consoleThisAndArguments() { console.log.apply(console, [this, arguments]) },
-            alert: new Function("alert.apply(null, arguments)"),
-            'true': new Function("return true"),
-            'false': new Function("return false"),
-            wrn: function consoleWarn() { console.warn.apply(console, arguments) },
-            dir: function consoleDir() { console.dir.apply(console, arguments) },
-            info: function consoleDir() { console.info.apply(console, arguments) },
+        // parseJSON
+        json: function() { return parssing.parseJSON.apply(parssing, arguments); },
+        parseJSON: function parseJSON( str ) {
+            try{
+                return JSON.parse( str );
+            } catch( _err ){ console.error( "Parse Error[parseJSON]:", _err); }
+        },
 
-            toLowerCase: toLC,
-            toLC: toLC,
-            toUpperCase: toUC,
-            toUC: toUC,
-            objectProp: protos.objectProp,
-            objProp: function objProp( obj, ps ) {
-                ps = ps===undefined ? [] : ps;
-                var newProping = extendFunction({}, protos.objectProp);
-                newProping['enumerable'] = ps['e']!==undefined ? !!ps['e'] : true;
-                newProping['configurable'] = ps['c']!==undefined ? !!ps['c'] : true;
-                newProping['writable'] = ps['w']!==undefined ? !!ps['w'] : true;
-                newProping['add'] = ps['add']!==undefined && typeOfVar( ps['add'] )==varsType.a ? ps['add'] : false;
-                newProping['skip'] = ps['skip']!==undefined ? !!ps['skip'] : false;
+        // JSON.stringify
+        stringJSON: function() { return parssing.unjson.apply(parssing, arguments); },
+        unjson: function JSONstringify( str ) {
+            try{
+                return JSON.stringify( str );
+            } catch( _err ){ console.error( "Parse Error[unjson]:", _err); }
+        },
 
-                if( newProping['add'] )
-                    foreach(newProping['add'], ( i, p )=>{ p&&Object.defineProperty( obj, p, newProping); } );
+        // parseXML
+        xml: function parseXML( str ) {
+            try{
+                var xml, parser;
+                if( !!!str||!!!_z.isString(str) )
+                    return null;
 
-                if( !!!newProping['skip'] )
-                    foreach(obj, (p)=>{ Object.defineProperty( obj, p, newProping); } );
+                try {
+                    if( window.DOMParser ) {
+                        parser = new DOMParser();
+                        xml = parser.parseFromString( str, "text/xml" );
+                    } else // Internet Explorer
+                    {
+                        xml = new ActiveXObject("Microsoft.XMLDOM");
+                        xml.async = false;
+                        xml.loadXML( str );
+                    }
+                } catch( e ) { xml = null; }
 
-                return obj;
-            },
+                if( !!!xml )
+                    return console.error( "Invalid XML: " + str ), null;
 
-            // return v as number || 0
-            toNum: function toNumber( v ) { return Number( v )||0; },
+                return xml;
+            } catch( e ) { console.error( "Parse Error:"+ e ); }
+        },
+        parseXML: function parseXML(htmlString) {
+            return (new DOMParser()).parseFromString(htmlString,"text/xml");
+        },
 
-            isSetFunc: function isSetAndIsFunction( v, k ) { k = k || false;
-                return ( v && !!( k!==false ? v[k] : v ) && _z.isFunction( ( k!==false ? v[k] : v ) ) );
-            },
+        // parseXML from url
+        xmlFromURL: function parseXMLFromUrl( url ) {
+            try{
+                var xml, xmlhttp, parser;
+                if( !!!url||!!!_z.isString(url) )
+                    return null;
 
-            // create new error type
-            newErrorType: function createNewErrorType( errorName, typeName ) {
-                typeName = typeName || 'Error',
-                    errorName = errorName || '_zError';
+                try {
+                    if( window.XMLHttpRequest ) // code for IE7+, Firefox, Chrome, Opera, Safari
+                        xmlhttp = new XMLHttpRequest();
+                    else // code for IE6, IE5
+                        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
 
-                return fns.tryEval(
-                    `
-				return function `+errorName+`( message ) {
-					var error = new `+typeName+`( message||'Error' );
-					error.name = '`+errorName+`';
-					return error;
-				}
-				`
-                );
-            },
+                    xmlhttp.open( "GET", url, false );
+                    xmlhttp.send();
+                    xml = xmlhttp.responseXML;
+                } catch( e ) { return console.error( "error while parssing: " + e ), null; }
 
-            toggle: {
-                class: {
-                    off: true,
-                    _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return _z(this).toggleClass(arguments[0]);"),
-                    call: function(){
-                        if(this.off)
-                            return;
+                return xml;
+            } catch( e ) { console.error( "Parse Error:"+ e ); }
+        },
+    },
 
-                        return this._call.apply( arguments[0], Array.from(arguments).slice(1) );
-                    },
-                }
-            },
-            ask: {
-                off: false,
-                _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return confirm.apply(null, arguments);"),
+    // base64 en/decoder
+    base64 = {
+        // encoder polyfill
+        // [https://gist.github.com/999166] by [https://github.com/nignag]
+        btoa: ( window.btoa || ( window.btoa = function (input) {
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
+                InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
+                str = String(input);
+            for (
+                // initialize result and counter
+                var block, charCode, idx = 0, map = chars, output = '';
+                // if the next str index does not exist:
+                //   change the mapping table to "="
+                //   check if d has no fractional digits
+                str.charAt(idx | 0) || (map = '=', idx % 1);
+                // "8 - idx % 1 * 8" generates the sequence 2, 4, 6, 8
+                output += map.charAt( 63 & block >> 8 - idx % 1 * 8 )
+            )
+            {
+                charCode = str.charCodeAt( idx += 3/4 );
+                if( charCode > 0xFF )
+                    throw new InvalidCharacterError("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+
+                block = block << 8 | charCode;
+            }
+
+            return output;
+        })).bind(window),
+
+        // decoder polyfill
+        // [https://gist.github.com/1020396] by [https://github.com/atk]
+        atob: ( window.atob || ( window.atob = function (input) {
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
+                InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
+                str = String( input ).replace(/[=]+$/, ''); // #31: ExtendScript bad parse of /=
+
+            if( str.length % 4 == 1 )
+                throw new InvalidCharacterError("'atob' failed: The string to be decoded is not correctly encoded.");
+
+            for (
+                // initialize result and counters
+                var bc = 0, bs, buffer, idx = 0, output = '';
+                // get next character
+                buffer = str.charAt( idx++ );
+                // character found in table? initialize bit storage and add its ascii value;
+                ~buffer && ( bs = bc % 4 ? bs * 64 + buffer : buffer,
+                    // and if not first of each 4 characters,
+                    // convert the first 8 bits to one ascii character
+                bc++ % 4 ) ? output += String.fromCharCode( 255 & bs >> (-2 * bc & 6) ) : 0
+            )
+            {
+                // try to find character in table (0-63, not found => -1)
+                buffer = chars.indexOf( buffer );
+            }
+
+            return output;
+        })).bind(window),
+
+        // base64_encode
+        encode: function base64_encode( code ) {
+            return base64.btoa( unescape( encodeURIComponent( code ) ) );
+        },
+
+        // base64_decode
+        decode: function base64_decode( code ) {
+            return decodeURIComponent( escape( base64.atob( code ) ) );
+        },
+    },
+
+    // functions ( shortcuts )
+    fns = {
+        registeredEvents: registeredEvents,
+        propertyGetter: function( cb, args ) {
+            return { get () { return cb( ...(args||[]) ); } };
+        },
+        ef: new Function(" "),
+        nan: new Function(" "),
+        inputbox: function inputbox() { return prompt.apply(window, arguments) || undefined; },
+        arg: function consoleArguments() { console.log.apply(console, arguments) },
+        trc: function consoleTrace() { console.trace.apply(console, arguments) },
+        logthis: function consoleThis() { console.log.apply(console, this) },
+        log: function consoleThisAndArguments() { console.log.apply(console, [this, arguments]) },
+        alert: new Function("alert.apply(null, arguments)"),
+        'true': new Function("return true"),
+        'false': new Function("return false"),
+        wrn: function consoleWarn() { console.warn.apply(console, arguments) },
+        dir: function consoleDir() { console.dir.apply(console, arguments) },
+        info: function consoleDir() { console.info.apply(console, arguments) },
+
+        toLowerCase: toLC,
+        toLC: toLC,
+        toUpperCase: toUC,
+        toUC: toUC,
+        objectProp: protos.objectProp,
+        objProp: function objProp( obj, ps ) {
+            ps = ps===undefined ? [] : ps;
+            var newProping = extendFunction({}, protos.objectProp);
+            newProping['enumerable'] = ps['e']!==undefined ? !!ps['e'] : true;
+            newProping['configurable'] = ps['c']!==undefined ? !!ps['c'] : true;
+            newProping['writable'] = ps['w']!==undefined ? !!ps['w'] : true;
+            newProping['add'] = ps['add']!==undefined && typeOfVar( ps['add'] )==varsType.a ? ps['add'] : false;
+            newProping['skip'] = ps['skip']!==undefined ? !!ps['skip'] : false;
+
+            if( newProping['add'] )
+                foreach(newProping['add'], ( i, p )=>{ p&&Object.defineProperty( obj, p, newProping); } );
+
+            if( !!!newProping['skip'] )
+                foreach(obj, (p)=>{ Object.defineProperty( obj, p, newProping); } );
+
+            return obj;
+        },
+
+        // return v as number || 0
+        toNum: function toNumber( v ) { return Number( v )||0; },
+
+        isSetFunc: function isSetAndIsFunction( v, k ) { k = k || false;
+            return ( v && !!( k!==false ? v[k] : v ) && _z.isFunction( ( k!==false ? v[k] : v ) ) );
+        },
+
+        // create new error type
+        newErrorType: function createNewErrorType( errorName, typeName ) {
+            typeName = typeName || 'Error',
+                errorName = errorName || '_zError';
+
+            return fns.tryEval(
+                `
+            return function `+errorName+`( message ) {
+                var error = new `+typeName+`( message||'Error' );
+                error.name = '`+errorName+`';
+                return error;
+            }
+            `
+            );
+        },
+
+        toggle: {
+            class: {
+                off: true,
+                _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return _z(this).toggleClass(arguments[0]);"),
                 call: function(){
                     if(this.off)
-                        return true;
-
-                    return this._call.apply( this._call, arguments );
-                },
-            },
-
-            // apply to function
-            callFunction: function callFunction( func, arg, $this ) {
-                $this = fns.turn( $this, this );
-                arg = arg || [];
-                func = func || fns.ef;
-                arg = !_z.isArray(arg) ? [arg] : arg;
-                return (
-                    (_z.isFunction( func ) && func.apply($this, arg )) ||
-                    (_z.isset( _z[func] ) && _z.isFunction( _z[func] ) && _z[func].apply($this, arg ))
-                );
-            },
-
-            // current timestamp
-            time: function time(c) {
-                c = c || false;
-                var t = new Date();
-                return c===false ? t.getTime() : (c == 's' ? t.getSeconds() : (c == 'm' ? t.getMinutes() : (c == 'h' ? t.getHours() : t)));
-            },
-
-            // eval
-            eval: ( window.execScript || function _zEval( code ) { window[ "eval" ].call( window, code ); }),
-            tryEval: function tryEval( code ) {
-                var returns="";
-                if( triming.call( code ) )
-                    try{ returns = fns.eval( triming.call( code ) ) || ""; } catch (e1) {
-                        try { returns = fns.eval( '('+triming.call( code )+')' ) || ""; } catch(e2) {
-                            try { returns = (new Function( triming.call( code ) ))() || ""; } catch(e3) { returns=""; }
-                        }
-                    }
-                return returns;
-            },
-
-            // define randome vars ( development purpose )
-            get defineRandom() {
-                var VarsNames = [
-                        'a',
-                        'o',
-                        's',
-                        'f'
-                    ],
-
-                    VarsValues = [
-                        VarsNames,
-                        {
-                            num: 123,
-                            str: "hlaCk _z",
-                            bool: true,
-                            arr: Array.from( VarsNames ),
-                            obj: {
-                                a: 'a', b: 'b', c: 'c'
-                            },
-                        },
-                        'The hlaCk ..',
-                        function() {
-                            return arguments;
-                        }
-                    ],
-
-                    override = false,
-
-                    $return = [],
-
-                    tWin = window;
-
-                foreach( VarsNames, function( rVar ) {
-                    // do not override
-                    if( isset( tWin[ VarsNames[ rVar ] ] ) && !override )
                         return;
 
-                    // register as defined
-                    $return.push( VarsNames[ rVar ] );
+                    return this._call.apply( arguments[0], Array.from(arguments).slice(1) );
+                },
+            }
+        },
+        ask: {
+            off: false,
+            _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return confirm.apply(null, arguments);"),
+            call: function(){
+                if(this.off)
+                    return true;
 
-                    // add functions
-                    tWin[ VarsNames[ rVar ] ] = VarsValues[ rVar ];
-                } );
-
-                return $return;
-            },
-
-
-            // throw functions
-            t: {
-                // throw new error
-                e: function() { throw new Error( ...arguments ); },
-
-                // throw new type error
-                t: function() { throw new TypeError( ...arguments ); },
-
-                // throw new refrance error
-                r: function() { throw new ReferenceError( ...arguments ); },
-
-                // throw generator
-                generate: function(e) { throw !( e instanceof Error ) ? new Error(e) : e },
-            },
-
-            turn: function( c, y ) {
-                if( this == true ) // case sensitive
-                    return !isset(c)&&y || c;
-                else
-                    return !!!c&&y || c;
-            },
-
-            turny: function turny( o ) {
-                if(window['last']==123) console.warn( this, arguments );
-
-                if( !isset( this['BINDED'] ) && (!arguments.length || !isset(o['arg'])) ) return;
-
-                if( !isset( this['BINDED'] ) ) {
-                    o['arg'] = [ ...( o['arg']||[] ) ].reverse();
-                    o['arguments'] = [ ...o['arg'] ].reverse();
-
-                    return turny.bind( { BINDED: 1, 'o': o } );
-                }
-                else
-                {
-                    var anyQuery = [];
-                    anyQuery['passed'] = isset( o ) || false;
-                    anyQuery['end'] = anyQuery['passed'] && o == 'end' || false;
-                    anyQuery['last'] = anyQuery['passed'] && o == 'last' || false;
-                    anyQuery['self'] = anyQuery['passed'] && o == 'self' || false;
-                    anyQuery['arguments'] = anyQuery['passed'] && (o == 'arguments' && this['o']['arg'] || typeOfVar(o)==varsType.n&&this['o']['arg'][ o ]) || false;
-                    anyQuery['isset'] = anyQuery['passed'] && (anyQuery['last'] || anyQuery['self'] || anyQuery['arguments'] || anyQuery['end']) && true || false;
-
-                    if( anyQuery['passed'] && !anyQuery['end'] )
-                    {
-                        return anyQuery['last']&&this['o']['last'] ||
-                            anyQuery['self']&&this['o']['self'] ||
-                            anyQuery['arguments'] || undefined;
-                    }
-
-                    if( isset(this['o']['self']) || anyQuery['end'] )
-                    {
-                        var selfFnd;
-                        if( !is_z( this['o']['self'] ) )
-                            selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
-                                ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
-                        else
-                        {
-                            selfFnd = this['o']['self'];
-                            this['o']['arguments'].unshift( selfFnd );
-
-                            if( this['o']['arg'].length && selfFnd.equalsAll( this['o']['arg'].slice(-1).pop() ) )
-                                this['o']['arg'].pop() && this['o']['arguments'].shift();
-                        }
-
-                        if( isset(this['o']['self']) ) delete this['o']['self'];
-
-                        if( anyQuery['end'] )
-                            return this['o']['arguments'];
-
-                    }
-                    else
-                    if( isset(this['o']['arg']) ) {
-                        if( !this['o']['arg'].length && isset(this['o']['last']) )
-                        {
-                            var selfFnd = (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) || undefined;
-                            delete this['o']['last'];
-                        }
-                        else
-                        {
-                            var selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
-                                ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
-                        }
-                    }
-
-                    return selfFnd;
-                    return console.warn( this, arguments );
-                }
-
-                return 0;
-            },
-            _zturn: function( c, y ) {
-                return !_z.is_z(c)&&y || c;
-            },
-            _turn: function( c, y ) {
-                return _z.is_z(c)&&y || c;
+                return this._call.apply( this._call, arguments );
             },
         },
 
-        /*
+        // apply to function
+        callFunction: function callFunction( func, arg, $this ) {
+            $this = fns.turn( $this, this );
+            arg = arg || [];
+            func = func || fns.ef;
+            arg = !_z.isArray(arg) ? [arg] : arg;
+            return (
+                (_z.isFunction( func ) && func.apply($this, arg )) ||
+                (_z.isset( _z[func] ) && _z.isFunction( _z[func] ) && _z[func].apply($this, arg ))
+            );
+        },
+
+        // current timestamp
+        time: function time(c) {
+            c = c || false;
+            var t = new Date();
+            return c===false ? t.getTime() : (c == 's' ? t.getSeconds() : (c == 'm' ? t.getMinutes() : (c == 'h' ? t.getHours() : t)));
+        },
+
+        // eval
+        eval: ( window.execScript || function _zEval( code ) { window[ "eval" ].call( window, code ); }),
+        tryEval: function tryEval( code ) {
+            var returns="";
+            code = code.replace("/\\/", "/\\/\\");
+            if( triming.call( code ) )
+                try{ returns = fns.eval( triming.call( code ) ) || ""; } catch (e1) {
+                    try { returns = fns.eval( '('+triming.call( code )+')' ) || ""; } catch(e2) {
+                        try { returns = (new Function( triming.call( code ) ))() || ""; } catch(e3) { console.error(e3);returns=""; }
+                    }
+                }
+            return returns;
+        },
+
+        // define randome vars ( development purpose )
+        get defineRandom() {
+            var VarsNames = [
+                    'a',
+                    'o',
+                    's',
+                    'f'
+                ],
+
+                VarsValues = [
+                    VarsNames,
+                    {
+                        num: 123,
+                        str: "hlaCk _z",
+                        bool: true,
+                        arr: Array.from( VarsNames ),
+                        obj: {
+                            a: 'a', b: 'b', c: 'c'
+                        },
+                    },
+                    'The hlaCk ..',
+                    function() {
+                        return arguments;
+                    }
+                ],
+
+                override = false,
+
+                $return = [],
+
+                tWin = window;
+
+            foreach( VarsNames, function( rVar ) {
+                // do not override
+                if( isset( tWin[ VarsNames[ rVar ] ] ) && !override )
+                    return;
+
+                // register as defined
+                $return.push( VarsNames[ rVar ] );
+
+                // add functions
+                tWin[ VarsNames[ rVar ] ] = VarsValues[ rVar ];
+            } );
+
+            return $return;
+        },
+
+
+        // throw functions
+        t: {
+            // throw new error
+            e: function() { throw new Error( ...arguments ); },
+
+            // throw new type error
+            t: function() { throw new TypeError( ...arguments ); },
+
+            // throw new refrance error
+            r: function() { throw new ReferenceError( ...arguments ); },
+
+            // throw generator
+            generate: function(e) { throw !( e instanceof Error ) ? new Error(e) : e },
+        },
+
+        turn: function( c, y ) {
+            if( this == true ) // case sensitive
+                return !isset(c)&&y || c;
+            else
+                return !!!c&&y || c;
+        },
+
+        turny: function turny( o ) {
+            if(window['last']==123) console.warn( this, arguments );
+
+            if( !isset( this['BINDED'] ) && (!arguments.length || !isset(o['arg'])) ) return;
+
+            if( !isset( this['BINDED'] ) ) {
+                o['arg'] = [ ...( o['arg']||[] ) ].reverse();
+                o['arguments'] = [ ...o['arg'] ].reverse();
+
+                return turny.bind( { BINDED: 1, 'o': o } );
+            }
+            else
+            {
+                var anyQuery = [];
+                anyQuery['passed'] = isset( o ) || false;
+                anyQuery['end'] = anyQuery['passed'] && o == 'end' || false;
+                anyQuery['last'] = anyQuery['passed'] && o == 'last' || false;
+                anyQuery['self'] = anyQuery['passed'] && o == 'self' || false;
+                anyQuery['arguments'] = anyQuery['passed'] && (o == 'arguments' && this['o']['arg'] || typeOfVar(o)==varsType.n&&this['o']['arg'][ o ]) || false;
+                anyQuery['isset'] = anyQuery['passed'] && (anyQuery['last'] || anyQuery['self'] || anyQuery['arguments'] || anyQuery['end']) && true || false;
+
+                if( anyQuery['passed'] && !anyQuery['end'] )
+                {
+                    return anyQuery['last']&&this['o']['last'] ||
+                        anyQuery['self']&&this['o']['self'] ||
+                        anyQuery['arguments'] || undefined;
+                }
+
+                if( isset(this['o']['self']) || anyQuery['end'] )
+                {
+                    var selfFnd;
+                    if( !is_z( this['o']['self'] ) )
+                        selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
+                            ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
+                    else
+                    {
+                        selfFnd = this['o']['self'];
+                        this['o']['arguments'].unshift( selfFnd );
+
+                        if( this['o']['arg'].length && selfFnd.equalsAll( this['o']['arg'].slice(-1).pop() ) )
+                            this['o']['arg'].pop() && this['o']['arguments'].shift();
+                    }
+
+                    if( isset(this['o']['self']) ) delete this['o']['self'];
+
+                    if( anyQuery['end'] )
+                        return this['o']['arguments'];
+
+                }
+                else
+                if( isset(this['o']['arg']) ) {
+                    if( !this['o']['arg'].length && isset(this['o']['last']) )
+                    {
+                        var selfFnd = (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) || undefined;
+                        delete this['o']['last'];
+                    }
+                    else
+                    {
+                        var selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
+                            ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
+                    }
+                }
+
+                return selfFnd;
+                return console.warn( this, arguments );
+            }
+
+            return 0;
+        },
+        _zturn: function( c, y ) {
+            return !_z.is_z(c)&&y || c;
+        },
+        _turn: function( c, y ) {
+            return _z.is_z(c)&&y || c;
+        },
+    },
+
+    /*
 CSSSELECTOR.indexed(e,['','input']) => "[name$=']'][name^='total[']input"
 CSSSELECTOR.indexed(e,['input','']) => "input[name$=']'][name^='total[']"
 CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 */
-        cssSelectorsIndexed = function cssSelectorReadIndexedElements(elm, adds, selType, returnAs) {
-            if( !!!elm ) elm = this;
+    cssSelectorsIndexed = function cssSelectorReadIndexedElements(elm, adds, selType, returnAs) {
+        if( !!!elm ) elm = this;
 
-            elm = elm || false;
-            returnAs = returnAs || 'elements';
-            adds = adds || [];
-            selType = selType || 'name';
-            // console.info("["+selType+"^='"+elm+"[']["+selType+"$=']']");
-            try {
-                elm = _z.isString(elm) ? _z("["+selType+"^='"+elm+"[']["+selType+"$=']']") : elm;
-                adds = _z.isArray(adds) ? adds : [adds, ''];
+        elm = elm || false;
+        returnAs = returnAs || 'elements';
+        adds = adds || [];
+        selType = selType || 'name';
+        // console.info("["+selType+"^='"+elm+"[']["+selType+"$=']']");
+        try {
+            elm = _z.isString(elm) ? _z("["+selType+"^='"+elm+"[']["+selType+"$=']']") : elm;
+            adds = _z.isArray(adds) ? adds : [adds, ''];
 
-                str = false;
-                var $return = [];
+            str = false;
+            var $return = [];
 
-                elm = _z(elm);
-            } catch(e) {
-                return elm.info.selector;
-            }
+            elm = _z(elm);
+        } catch(e) {
+            return elm.info.selector;
+        }
 
-            if( elm && elm.length ) {
-                elmFunc.elmLoop( elm, function( e ) {
-                    if( e && e[selType] ) {
-                        var str = e[selType].replace(/\[\d*?\]/g,'[')||false;
+        if( elm && elm.length ) {
+            elmFunc.elmLoop( elm, function( e ) {
+                if( e && e[selType] ) {
+                    var str = e[selType].replace(/\[\d*?\]/g,'[')||false;
 
-                        if( str )
-                            $return.push(
-                                adds.slice(0,parseInt(adds.length/2)) +
-                                "["+selType+"$=']']"+
-                                "["+selType+"^='"+str+"']" +
-                                adds.slice(parseInt(adds.length/2))
-                            );
-                    }
-                }, fns.true);
-            }
+                    if( str )
+                        $return.push(
+                            adds.slice(0,parseInt(adds.length/2)) +
+                            "["+selType+"$=']']"+
+                            "["+selType+"^='"+str+"']" +
+                            adds.slice(parseInt(adds.length/2))
+                        );
+                }
+            }, fns.true);
+        }
 
-            $return = $return.join(', ') || "";
-            return $return!=='' ? (returnAs=='string'?$return:_z($return)) : elm.info.selector;
-        },
+        $return = $return.join(', ') || "";
+        return $return!=='' ? (returnAs=='string'?$return:_z($return)) : elm.info.selector;
+    },
 
-        // search by indexed element
-        cssSelectorsIndexedSelector = function cssSelectorReadIndexedSelector( str ) {
-            str = str || false;
-            if(
-                !!!str ||
-                !!!_z.isString( str ) ||
-                !!!(new RegExp( selectorPatterns.indexed )).test( str )
-            ) return false;
+    // search by indexed element
+    cssSelectorsIndexedSelector = function cssSelectorReadIndexedSelector( str ) {
+        str = str || false;
+        if(
+            !!!str ||
+            !!!_z.isString( str ) ||
+            !!!(new RegExp( selectorPatterns.indexed )).test( str )
+        ) return false;
 
-            var selectorVal = str.replace( selectorPatterns.indexed, function(){
-                return (matches = [ ...arguments ].slice(1, 5)).length ?
-                    "[" +
-                    (matches[0] =
-                            matches[0]!='#' ?
-                                ( (matches2 = selectorPatterns.indexedAttr.exec(matches[0])) ? matches2[1] : "name" )
-                                : "id"
-                    ) +
-                    "^='" +
-                    matches[1] + matches[2] +
-                    "'][" +
-                    matches[0] +
-                    "$='" +
-                    matches[3] +
-                    "']"
-                    : false;
-            });
+        var selectorVal = str.replace( selectorPatterns.indexed, function(){
+            return (matches = [ ...arguments ].slice(1, 5)).length ?
+                "[" +
+                (matches[0] =
+                        matches[0]!='#' ?
+                            ( (matches2 = selectorPatterns.indexedAttr.exec(matches[0])) ? matches2[1] : "name" )
+                            : "id"
+                ) +
+                "^='" +
+                matches[1] + matches[2] +
+                "'][" +
+                matches[0] +
+                "$='" +
+                matches[3] +
+                "']"
+                : false;
+        });
 
-            if( !!!selectorVal || !!!selectorVal.length ) return false;
+        if( !!!selectorVal || !!!selectorVal.length ) return false;
 
-            return selectorVal;
-        },
+        return selectorVal;
+    },
 
-        // return css selector by DOM element
-        cssSelector = function getCSSSelectorByElement( node, limit, path, returnType ) {
-            path = path || [];
-            limit = limit || 1024;
-            returnType = returnType || "string";
-            path = !_z.isArray(path) ? [path] : path;
-            var _path = Array.from(path) || [""];
+    // return css selector by DOM element
+    cssSelector = function getCSSSelectorByElement( node, limit, path, returnType ) {
+        path = path || [];
+        limit = limit || 1024;
+        returnType = returnType || "string";
+        path = !_z.isArray(path) ? [path] : path;
+        var _path = Array.from(path) || [""];
 
-            if( node.parentNode && (limit!==1) )
-                path = getCSSSelectorByElement( node.parentNode, limit-1, path, "array" );
+        if( node.parentNode && (limit!==1) )
+            path = getCSSSelectorByElement( node.parentNode, limit-1, path, "array" );
 
-            if( node.nodeType == 1 )
-                path.push((
-                    node.nodeName.toLowerCase() +
-                    (node.id ? "[id='"+node.id+"']" : '' ) +
-                    (node.name ? "[name='"+node.name+"']" : '' ) +
-                    (node.className ? '.'+node.className.split(' ').join('.') : '' )
-                ));
+        if( node.nodeType == 1 )
+            path.push((
+                node.nodeName.toLowerCase() +
+                (node.id ? "[id='"+node.id+"']" : '' ) +
+                (node.name ? "[name='"+node.name+"']" : '' ) +
+                (node.className ? '.'+node.className.split(' ').join('.') : '' )
+            ));
 
-            limit = ( limit!==false && limit>path.length ) ? path.length : limit;
-            var result = ((limit!==false) ? Array.from(path).reverse().slice(0, limit).reverse() : path);
+        limit = ( limit!==false && limit>path.length ) ? path.length : limit;
+        var result = ((limit!==false) ? Array.from(path).reverse().slice(0, limit).reverse() : path);
 
-            result.unshift( ..._path );
-            result = returnType=='string' ? result.join(' ') : result;
+        result.unshift( ..._path );
+        result = returnType=='string' ? result.join(' ') : result;
 
-            return result;
-        },
+        return result;
+    },
 
-        // is element == window
-        isWindow = function isWindow( element ) {
-            var t = _z.privates.type( element );
-            return element != null &&
-                (
-                    !!(t['window']) || (
-                        !!_z.is_z( element ) &&
-                        !!(elmFunc.elmLoop( element, fns.true, isWindow ).length == element.length)
-                    )
-                );
-        },
+    // is element == window
+    isWindow = function isWindow( element ) {
+        var t = _z.privates.type( element );
+        return element != null &&
+            (
+                !!(t['window']) || (
+                    !!_z.is_z( element ) &&
+                    !!(elmFunc.elmLoop( element, fns.true, isWindow ).length == element.length)
+                )
+            );
+    },
 
-        // check if this module is _z declare system & exist
-        isDeclare = function isDeclare( module, obj ) {
-            obj = obj || false;
-            if( obj === false )
-                return isset( _z['declaresMap'] ) && isset( _z['declaresMap'][ module ] ) && isDeclare( module, _z['declaresMap'][ module ] ) || false;
+    // check if this module is _z declare system & exist
+    isDeclare = function isDeclare( module, obj ) {
+        obj = obj || false;
+        if( obj === false )
+            return isset( _z['declaresMap'] ) && isset( _z['declaresMap'][ module ] ) && isDeclare( module, _z['declaresMap'][ module ] ) || false;
 
-            return obj && isset( obj['declares'] ) && isset( obj['declares'][ module ] ) && obj['declares'][ module ]
-                || false;
-        },
+        return obj && isset( obj['declares'] ) && isset( obj['declares'][ module ] ) && obj['declares'][ module ]
+            || false;
+    },
 
-        // find free id
-        new_zID = function createNew_zID( isEngine ) {
+    // find free id
+    new_zID = function createNew_zID( isEngine ) {
             var newStamp = fns.time() || 0,
                 newID = ++_z._counter || 0,
                 _newID = 0,
@@ -1456,9 +1483,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             (e===false||e)&&(this.relayFns.error=e), this;
         },
         relays: function( type, result ) {
-            if( type&&this.relayFns[type] && _z.isFuncion(this.relayFns[type])&&result )
+            if( type&&this.relayFns[type] && (this.relayFns[type]).isType("function") &&result )
                 this.relayFns[type](result);
-            else if( type&&this.relayFns[type]&&_z.isFuncion(this.relayFns[type]) && !!!result&&this.resolving[type]) {
+            else if( type&&this.relayFns[type]&& (this.relayFns[type]).isType("function") && !!!result&&this.resolving[type]) {
                 result = Array.from(this.resolving[type]);
                 var r;
                 while( r=result.shift() )
@@ -1753,7 +1780,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( isset(arguments[0]) && _z.isString( arguments[0] ) && $elements===false ) {
                 if(
                     selectorPatterns.index &&
-                    arguments[0].match(new RegExp(selectorPatterns.index)).length > 0 &&
+                    (arguments[0].match(new RegExp(selectorPatterns.index))||[]).length > 0 &&
                     ( testSelector = new RegExp(selectorPatterns.index).exec( arguments[0]) ) &&
                     isset( testSelector[1], testSelector[2] )
                 ) {
@@ -2885,7 +2912,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         trim: function trimString( str ) {
             var tunning = fns.turny({
                 arg: arguments,
-                // self: this,
+                self: this,
                 last: undefined
             });
             str = tunning.call();
@@ -2993,6 +3020,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
+        // get current active dom element as _z()
+        activeElment: function activeElement() {
+            try { return _z( document.activeElement ); } catch ( err ) { return _z(); }
+        },
+
     }, {
         // effect status, true = enabled, false = disabled
         eff: true,
@@ -3043,9 +3075,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             try {
                 var resp;
 
-                elmFunc.elmLoop( _z(e), function( elem ) {
+                elmFunc.elmLoop( _z(e), ( elem ) => {
                     if( _z(elem).attr("src") && elem.src )
-                        _z.ajax({
+                        resp = _z.ajax({
                             url: elem.src,
                             type: "GET",
                             data: "",
@@ -3060,9 +3092,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 });
             } catch(eEval) {
                 console.error(eEval);
+                resp = false;
             }
 
-            return this;
+            return resp;//this;
         },
 
     }].mix;
@@ -3539,13 +3572,15 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             global: function global() {
                 if( _z.isset(this.global.registered) && this.global.registered===true ) return this;
 
+                this.global.registered = true;
+                return this.hook( window );
                 var w = _vanilla.window&&_vanilla.window || window;
                 if( !_z.isWindow(w) ) return console.error("UnderZ[" + this.id + "]: No Window Found."), this;
 
                 if( _z.isset(w[ this.id ]) ) return console.error("UnderZ[" + this.id + "]: Already Exist!"), this;
 
                 this.global.registered = true;
-                return this.hook( w );
+                return this.hook( window );
             },
 
             // recall function after while
@@ -3672,10 +3707,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 newDeclare.requires = [];
 
             if( !_z.isFunction(newDeclare.initFunction) )
-                newDeclare.initFunction = window.fns.ef;
+                newDeclare.initFunction = window.fns.true;
 
             if( !_z.isFunction(newDeclare.whenRequest) )
-                newDeclare.whenRequest = window.fns.ef;
+                newDeclare.whenRequest = window.fns.true;
 
             if( !!!module ) return newDeclare;
 
@@ -4045,7 +4080,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             // $this.xhrFuncsSetTest = ()=>{ param.promise.success(), param.promise.error(); };
 
-            param.promise.relay(function(result) {
+            param.promise.then(function(result) {
                 $this.xhrFuncsApply( 'done', true, result );
             }, function(result) {
                 $this.xhrFuncsApply( 'error', true, result );
@@ -4077,7 +4112,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 for( var i = 0; i < fnsLen; i++ ) {
                     fs = !!!deleteIt ? fnsList[i] : fnsList.shift();
                     if( _z.isFunction(fs) )
-                        fs.apply( this, args || []);
+                        fs.callSelf( this, ...(args || []));
                 }
         },
 
@@ -4781,6 +4816,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
+
         // is element shown
         isShow: function isShow( ret ) {
             ret = ret || false;
@@ -4809,7 +4845,32 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
         // is element hidden
-        isHidden: function isHidden() { return !!!this.isShow(); },
+        isHidden: function isHidden() {
+            status = false;
+
+            if( this.length > 1 ) {
+                var elm = this,
+                $return=[];
+
+                elmFunc.elmLoop( elm, function( e ) {
+                    if( ret==true && _z(e).isShow() )
+                        $return.push( e );
+                    else if( ret!=true )
+                        $return.push( _z(e).isShow() );
+                });
+
+                return ret==true ? this.newSelector( $return ) : $return;
+            }
+
+            if( _z(this) )
+                var status = _z(this).hasClass( 'hidden' ) ? true :
+                    ( /hidden|none/i.test( _z( this ).css( 'visibility' ) +" "+ _z( this ).css( 'display' ) ) );
+
+            status = ( ret==true && !!!status ) ? this : !!!status;
+
+            return status;
+        },
+
         isHide: function isHidden() { return !!!this.isShow(); },
 
         // is element in view
@@ -6639,7 +6700,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
         // load single
-        loaders: (function() {
+        loader: (function() {
             // Function which returns a function: https://davidwalsh.name/javascript-functions
             function _load( tag ) {
                 return function( url ) {
