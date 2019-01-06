@@ -75,11 +75,11 @@
 
 // Object.getType => type of object lowerCase
     if(typeof Object.prototype.getType !== 'function')
-        Object.prototype.getType = function() {
+        Object.prototype.getType = function( toLowerCase ) { toLowerCase = toLowerCase || arguments.length ? false : true;
             if(this instanceof _z) return "_z";
             else if(this == _z) return "underz";
 
-            return Object.prototype.toString.call( this ).replace("[object ", "").replace("]", "").trim().toLowerCase();
+            return Object.prototype.toString.call( this ).replace("[object ", "").replace("]", "").trim()[toLowerCase ? "toLowerCase" : "trim"]();
         };
 
 // Object.isType => true|false check object type
@@ -511,7 +511,169 @@ var
                 i = _matches.length;
             while (--i >= 0 && _matches.item( i ) !== this) {}
             return i > -1;
+        };
+
+
+    // all registeredEvents
+var events = {
+        // addEventListener
+        register: function eventListenerHandler( data ) {
+            // target, type, callback
+            if( typeOfVar(data)!=varsType.o || !data['eventName'] || !data['element']) return false;
+
+            var target = data['element'],
+                eventName;
+            var listenerMethod = (eventName = data['eventName'])&&target.addEventListener || (eventName = 'on' + data['eventName'])&&target.attachEvent || (eventName = data['eventName'])&&fns.ef;
+            var removeMethod = target.removeEventListener || target.detachEvent || fns.ef;
+
+            var registerData = {
+                element: target||false,
+                eventName: data['eventName']||false,
+                eventNameMethod: eventName,
+                qselector: data['qselector']||"",
+                alias: data['alias']||[],
+                proxyCallback: data['proxyCallback']||data['callback']||data['realcallback']||false,
+                realcallback: data['callback']||data['realcallback']||false
+            };
+
+            var arg = [ eventName, registerData['proxyCallback']||registerData['realcallback'] ];
+            var deArg = Array.from(arg);
+            registerData['remover'] = ()=>{
+                removeMethod.apply&&removeMethod.apply(target, deArg );
+                return true;
+            };
+
+            if( target.addEventListener )
+                arg.push( false );
+
+            events.add(registerData);
+            listenerMethod.apply&&listenerMethod.apply(target, arg );
+            return true;
         },
+        // removeEventListener
+        unRegister: function eventUnListenerHandler( data ) {
+            if (typeOfVar(data) != varsType.o) return false;
+            var rEL = events.find( data );
+
+            if (!rEL)
+                return false;
+            else if( rEL.length )
+                _z.for(rEL, function(ELK, ELV){
+                    ELV['remover']&&_z.isFunction(ELV['remover'])&&ELV['remover']();
+                });
+            else if( rEL['remover'] )
+                rEL['remover']&&_z.isFunction(rEL['remover'])&&rEL['remover']();
+
+            return true;
+        },
+        data: {},
+        find: function findRegisteredEvents( fn ){
+            var ev = this.data,
+                $return = [];
+
+            var dataID = fn['dataID'] || false;
+
+            if ( dataID && !ev[dataID] ) {
+                return false;
+            } else
+                fn = dataID&&ev[dataID]  ? [ ev[dataID] ] : fn;
+
+            _z.for( ev, function( k, v ) {
+                if( _z.isFunction(fn) && v['realcallback'] && v['realcallback']==fn)
+                    $return.push( v );
+                else if( _z.isObject( fn ) ) {
+                    var $return2={};
+                    _z.for( fn, function( $k, $v ) {
+                        if (v[$k] != $v && $k != "alias")
+                            return $return2 = false, false;
+                        else if ($k == "alias" && _z.size($v) > 0) {
+                            $v = !_z.isArray($v) ? $v.split(".") : $v;
+                            var rAlies = v["alias"] || [];
+                            if( _z.size(rAlies) > 0  ) {
+                                var match = [];
+                                _z.for($v, function (vAI, vAV) {
+                                    if(rAlies.includes(vAV))
+                                        match.push(vAV);
+                                    else
+                                        return false;
+                                });
+                                if(match.length != $v.length) match = [];
+                            }
+                            else return $return2 = false, false;
+
+                            $return2 = !!match.length;
+                            return false;
+                        } else
+                            $return2[ $k ] = $v;
+                    });
+                    if( $return2 !== false ) $return.push( v );
+                }
+            });
+
+            return $return || false;
+        },
+        add: function addRegisteredEvents( data ) {
+            var data = arguments.length==1&&typeOfVar(data)==varsType.o ? data : { name: data };
+            var _data = {
+                element: data['element'] || false,
+                eventName: data['eventName'] || data['name'] || false,
+                qselector: data['qselector'] || "",
+                alias: data['alias'] || [],
+                proxyCallback: data['proxyCallback'] || data['realcallback'] || false,
+                realcallback: data['callback'] || data['realcallback'] || false
+            };
+            _data['eventNameMethod'] = data['eventNameMethod'] || _data['eventName'] || false;
+            var remover = data['remover'] || fn.ef;
+
+            var fName = 'cb'+fns.time();
+            while( isset(this.data[ fName ]) )
+                fName = 'cb'+fns.time()+'_'+ _z.size( this.data );
+
+            _data['remover'] = function(){
+                remover();
+                delete events.data[ fName ];
+            };
+
+            this.data[ fName ] = _data;
+
+            return this.data[ fName ]['realcallback'] || true;
+        },
+        getEventName: function eventNameWithOutAlias( eventName ) {
+            if( !eventName || !_z.isString(eventName) ) return false;
+
+            var alias = (eventName = eventName.split(".")).splice(1);
+            return eventName[0] || "";
+        },
+        getAlias: function eventNameAlias( eventName ) {
+            if( !eventName || !_z.isString(eventName) ) return false;
+
+            var alias = (eventName = eventName.split(".")).splice(1);
+            return alias || [];
+        },
+        dispatch: function dispatchEvent( event, data ) {
+            if( !event || !(e=this)) return false;
+
+            if( hasProp(e, 'dispatchEvent') )
+                return e.dispatchEvent(event);
+            else {
+                var _elmentWithNS = events.find( data||{
+                                                    element: e,
+                                                    eventName: event.type||false,
+                                                });
+
+                if( _z.size(_elmentWithNS) == 0 ) return false;
+                else {
+                    _z.for(_elmentWithNS, function (_Index, _e) {
+
+                        var eventName = events.getEventName( _e["eventName"] );
+                        var cb = (_e["proxyCallback"]||_e["realcallback"]||fns.ef);
+                        cb['apply']&&cb.apply(_e["element"], [event, _e["alias"]]);
+                    });
+                }
+            }
+            return true;
+        }
+    },
 
     // elements functions
     elmFunc = {
@@ -540,7 +702,7 @@ var
             $elm = tunning[1] || undefined;
             $not = tunning[2] || false;
 
-            if( arguments.length==1 )
+            if( arguments.length==1 || $elm==undefined )
                 $elm = elm,
                     elm = this;
 
@@ -549,18 +711,21 @@ var
                 $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
 
                 elmFunc.elmLoop( elm, function( e ) {
+                    var _e = e;
+                    e = e==doc ? doc.documentElement : e;
                     var $currentElement = [];
                     elmFunc.elmLoop( _z( $elm ), function( e2 ) {
+                        e2 = e2==doc ? doc.documentElement : e2;
 
                         if( !_z.isDOM( e2 ) && toLC(typeOfVar( e2 ))==varsType.s )
-                            $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(e) ) ? e : false );
+                            $currentElement.push( ( elmFunc.matches( e, e2 )!==$not && !$return.includes(_e) ) ? _e : false );
                         else
-                            $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(e) ) ? e : false );
+                            $currentElement.push( ( e['isEqualNode'] && e['isEqualNode']( e2 )!==$not && !$return.includes(_e) ) ? _e : false );
 
-                    }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
+                    }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)||x==doc));
 
-                    if( filterArray( $currentElement ).length === $elm.length ) $return.push( e );
-                }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)));
+                    if( filterArray( $currentElement ).length === $elm.length ) $return.push( _e );
+                }, (x)=>(_z(x).isDOMElement( true )||_z.isString(x)||x==doc));
 
                 $return = filterArray( $return );
             }
@@ -756,86 +921,6 @@ var
         fadeOpacityValue: { In:0, Out:1 },
 
     },
-    // addEventListener
-    registerEvent = function eventListenerHandler( target, type, callback ) {
-        var listenerMethod = target.addEventListener || target.attachEvent,
-            eventName = target.addEventListener ? type : 'on' + type;
-
-        var registerData = {
-            element: callback['element']||target,
-            eventName: callback['eventName']||type,
-            qselector: callback['qselector']||"",
-            _callback: callback['_callback']||callback['callback']||"",
-            callback: callback['callback']||false
-        };
-
-        var arg = [ eventName, registerData['_callback']||registerData['callback'] ];
-        if( target.addEventListener )
-            arg.push( false );
-
-        return registeredEvents.add(registerData), listenerMethod.apply(target, arg );
-    },
-    // removeEventListener
-    unRegisterEvent = function eventUnListenerHandler( target, type, callback ) {
-        var removeMethod = target.removeEventListener || target.detachEvent,
-            eventName = target.removeEventListener ? type : 'on' + type;
-
-        return removeMethod.call(target, eventName, callback );
-    },
-    // all registeredEvents
-    registeredEvents = {
-        events: {},
-        find: function findRegisteredEvents( fn ){
-            var ev = this.events,
-                $return = [];
-
-            _z.for( ev, function( k, v ) {
-                if( _z.isFunction(fn) && v['realcallback'] && v['realcallback']==fn)
-                    $return.push( v );
-                else if( _z.isObject( fn ) ) {
-                    var $return2={};
-                    _z.for( fn, function( $k, $v ) {
-                        if( v[$k] != $v)
-                            return $return2=false, false;
-                        else
-                            $return2[ $k ] = $v;
-                    });
-                    if( $return2 !== false ) $return.push( v );
-                }
-            });
-
-            return $return || false;
-        },
-        add: function addRegisteredEvents( e, eventName, qselector, _callback, callback, element ) {
-            var data = arguments.length==1&&typeOfVar(e)==varsType.o ? e : false;
-            if( data )
-                e = data['element'] || false;
-
-            var element = element || data['element'] || e || doc,
-                eventName = eventName || data['eventName'],
-                qselector = qselector || data['qselector'],
-                _callback = _callback || data['_callback'],
-                callback = callback || data['callback'];
-
-            var fName = 'cb'+fns.time();
-            while( isset(this.events[ fName ]) )
-                fName = 'cb'+fns.time()+'_'+ _z.size( this.events );
-
-            this.events[ fName ] = {
-                element: element,
-                name: data['eventName'] || eventName,
-                qselector: data['qselector'] || qselector,
-                callback: data['_callback'] || _callback,
-                remover: function(){
-                    unRegisterEvent( element, (data['eventName'] || eventName), _callback );
-                    delete registeredEvents.events[ fName ];
-                },
-                realcallback: callback
-            };
-
-            return this.events[ fName ]['callback'];
-        }
-    },
     // parse functions
     parssing = {
         // parseHTML
@@ -995,7 +1080,8 @@ var
 
     // functions ( shortcuts )
     fns = {
-        registeredEvents: registeredEvents,
+        // this for programming test
+        registeredEvents: events,
         propertyGetter: function( cb, args ) {
             return { get () { return cb( ...(args||[]) ); } };
         },
@@ -1764,14 +1850,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( !!!isObj ) {
                 // DOM
                 var head = arguments[1]&&
-                    _z.isDOM( arguments[1] ) &&
+                    (_z.isDOM( arguments[1] ) || _z.is_z( arguments[1] )) &&
                     arguments[1] || false;
                 // nodeList
                 head = head || _z.type( arguments[1] ) == 'NodeList' &&
                     _z.toArray( arguments[1] ) || false;
                 // string
                 head = head || _z.isString( arguments[1] ) &&
-                    _z( arguments[1] ).element(0) ||
+                    _z( arguments[1] ) ||
                     doc;
             } else
                 var head;
@@ -1845,6 +1931,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         if( v.length ) $elements.add( ..._z( v ).element() );
                     }
                 });
+                $elements = $elements.unique();
             }
 
             // try querySelector
@@ -1949,10 +2036,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // add elements, return new underz
         add: function addElements( anElements ) {
             try {
-                (aE=toArray( anElements )) && ( anElements = aE);
+                anElements = _z(anElements).toArray();
             } catch ( err ) { }
+            // console.log(anElements);
             ( $anElements=this.element() ).push( ...( typeOfVar( anElements )==varsType.a ? anElements : [anElements] ) );
-
             return this.newSelector( $anElements );
         },
 
@@ -4989,6 +5076,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( !qSelector ) return this;
 
             elmFunc.elmLoop( elm, function( v ) {
+                v = v==doc ? doc.documentElement : v;
                 v = _z.toNodeList( v )[0];
 
                 if( v && v['querySelectorAll'] ) {
@@ -5522,7 +5610,53 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 eventName = _z.filter(eventName).toArray();
 
                 _z.for(eventName, function(eKey, eName) {
-                    _z(elm).trigger(eName);
+                    _z(elm).trigger( eName );
+                });
+
+                return this;
+            }
+
+            var _alias = [], alias = [];
+            if( alias.length ) {
+                _alias = alias;
+                alias = [];
+            }
+
+            alias = events.getAlias(eventName);
+            var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+            eventName = events.getEventName(eventName);
+
+            var elmentWithNS = [];
+            if( alias.length ) {
+                _z.for(elm, function (Index, e) {
+                    var needleData = {};
+                    e&&(needleData['element'] = e);
+                    eventName&&(needleData['eventName'] = eventName);
+                    alias&&(needleData['alias'] = alias);
+                    var _elmentWithNS = events.find( needleData );
+
+                    if( _z.size(_elmentWithNS) == 0 ) return ;
+                    else {
+                        elmentWithNS.push(_elmentWithNS);
+                        _z.for(_elmentWithNS, function (_Index, _e) {
+
+                            eventName = events.getEventName( _e["eventName"] );
+                            var NSalias = _e["alias"];
+                            var NSaliasQry =  (NSalias.length ? "." + NSalias.join(".") : "");
+
+                            var event = document.createEvent('HTMLEvents');
+                            event.initEvent(eventName, true, false);
+                            try {
+                                if( hasProp(e, eventName) && _z.isFunction(e[eventName]) )
+                                    e[eventName](event, alias);
+                            } catch (er) {
+                                console.error(er);
+                            }
+                            events.dispatch.apply(e, [event, _e]);
+                            // e.dispatchEvent(event);
+                        });
+                        return this;
+                    }
                 });
 
                 return this;
@@ -5533,12 +5667,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 event.initEvent(eventName, true, false);
 
                 try {
-                    if( eventName in e && _z.isFunction(e[eventName]) )
-                        e[eventName]();
+                    if( hasProp(e, eventName) && _z.isFunction(e[eventName]) )
+                        e[eventName](event, alias);
                 } catch (er) {
                     console.error(er);
                 }
-                e.dispatchEvent(event);
+                // e.dispatchEvent(event);
+                events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
 
             }, fns.true);
 
@@ -5550,7 +5685,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var elm = this,
                 eventName = eventName || false,
                 qselector = qselector || false,
-                callback = callback || false;
+                callback = callback || false,
+                alias = [];
 
             // if multi elements
             if( eventName && _z.isObject(eventName) && arguments.length < 2 ) {
@@ -5567,76 +5703,60 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 return this;
             }
 
-            if( !eventName || !qselector )
+            if( !eventName && !qselector )
                 return this;
 
             if( arguments.length == 2 && _z.isFunction( qselector ) )
                 callback = qselector,
                     qselector = false;
 
-            // listener to element
-            if( !qselector ) {
-                elmFunc.elmLoop( elm, function( e ) {
-                    registerEvent( e, eventName, {
-                        element: e,
-                        eventName: eventName,
-                        qselector: qselector,
-                        _callback: callback,
-                        callback: callback
-                    } );
-                }, fns.true);
+            if( !_z.isFunction(callback) ) return this;
 
+            // handle multi event
+            if( _z.isString(eventName) && eventName.split(" ").length > 1 )
+                eventName = eventName.split(" ");
+
+            if( _z.isArray(eventName) ) {
+                var oldArgs = _z.filter([eventName, qselector||"", callback||""]).toArray();
+
+                _z.for(eventName, function(eKey, eName) {
+                    oldArgs.shift();
+                    oldArgs.unshift(eName);
+                    _z(elm).on(...oldArgs);
+                });
                 return this;
-            } else { // listener to document
-                // just keep DOM Element
-                var elms = this.filter(($e)=>_z.isDOM($e)),
-                    elms2;
+            }
 
-                if( !elms.length || !elms )
-                    return this;
+            var alias = events.getAlias(eventName);
+            var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+            eventName = events.getEventName(eventName);
 
-                try{ // find the selector
-                    elms2 = elms;
-                    elms = _z([
-                        ...elms.find( qselector ).toArray(),
-                        ...elms.whereIs( qselector ).toArray()
-                    ]);
-                } catch(er) { console.error(er); return this; }
+            // .on("hover")
+            if( eventName == "hover" ) {
+                eventName = "mouseenter" + aliasQry + " mouseleave" + aliasQry;
+                return _z(elm).on( ...[eventName, qselector||"", callback||""].filter(x=>x) );
+            }
 
-                if( !elms.length )
-                    return _z();
+            elmFunc.elmLoop( elm, function( e ) {
+                var elms = e;
 
-                var _callback = function _callback( event ) {
+                if( !elms ) return this;
 
-                    try{ // find the selector
-                        elms = _z([
-                            ...elms2.find( qselector ).toArray(),
-                            ...elms2.whereIs( qselector ).toArray()
-                        ]);
-                    } catch(er) { console.error(er); return this; }
-
-                    var target = event.target;
-                    while( target ) {
-                        if( ( elms.toArray() ).includes( target ) )
-                            return callback.call(target, event);
-
-                        target = target.parentNode;
-                    }
+                var proxyCallback = function proxyCallback( event ) {
+                    var eventName = events.getEventName(event.type);
+                    if( qselector && event && event.target && _z(event.target).parents(qselector).addBack(qselector).length || !qselector )
+                        return callback.call(event.target, event);
                 };
 
-                // attachEvent
-                registerEvent(
-                    doc,
-                    eventName,
-                    {
-                        element: elm.element(0),
-                        eventName: eventName,
-                        qselector: qselector,
-                        _callback: _callback,
-                        callback: callback
-                    }
-                );
-            }
+                events.register( {
+                    element: elms,
+                    eventName: eventName,
+                    qselector: qselector,
+                    alias: alias,
+                    proxyCallback: proxyCallback,
+                    realcallback: callback
+                } );
+            }, fns.true);
 
             return this;
         },
@@ -5665,22 +5785,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         qselector = false;
             }
 
-            // .un("hover")
-            if( eventName == "hover" )
-                eventName = "mouseenter mouseleave";
-
-            // hamdle multi callback
-            if( callback && _z.isArray(callback) ) {
-                var oldArgs = _z.filter([eventName, qselector||"", callback||""]).toArray();
-
-                _z.for(callback, function(cKey, cName) {
-                    oldArgs.pop();
-                    oldArgs.push(cName);
-                    _z(elm).un(...oldArgs);
-                });
-                return this;
-            }
-
             // handle multi event
             if( _z.isString(eventName) && eventName.split(" ").length > 1 )
                 eventName = eventName.split(" ");
@@ -5696,27 +5800,44 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 return this;
             }
 
+            var alias = events.getAlias(eventName);
+            var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+            eventName = events.getEventName(eventName);
+
+            // .un("hover")
+            if( eventName == "hover" ) {
+                eventName = "mouseenter" + aliasQry + " mouseleave" + aliasQry;
+                return _z(elm).un( ...[eventName, qselector||"", callback||""].filter(x=>x) );
+            }
+
+            // hamdle multi callback
+            if( callback && _z.isArray(callback) ) {
+                var oldArgs = _z.filter([eventName + aliasQry, qselector||"", callback||""]).toArray();
+
+                _z.for(callback, function(cKey, cName) {
+                    oldArgs.pop();
+                    oldArgs.push(cName);
+                    _z(elm).un(...oldArgs);
+                });
+                return this;
+            }
+
             elmFunc.elmLoop( elm, function( e ) {
                 var needleData = false;
 
                 if( needleData == false ) {
                     needleData = {};
                     e&&(needleData['element'] = e);
-                    eventName&&(needleData['name'] = eventName);
+                    eventName&&(needleData['eventName'] = eventName);
                     qselector&&(needleData['qselector'] = qselector);
                     callback&&(needleData['realcallback'] = callback);
+                    alias&&(needleData['alias'] = alias);
                 }
 
-                var rEL = registeredEvents.find(needleData);
+                try {
+                    needleData&&events.unRegister( needleData );
+                } catch(__error) { }
 
-                if( rEL.length )
-                    _z.for(rEL, function(ELK, ELV){
-                        ELV['remover']&&ELV['remover']();
-                    });
-                else if( rEL['remover'] )
-                    rEL['remover']&&rEL['remover']();
-                else
-                    try { unRegisterEvent( e, eventName, callback ); } catch(__error) { }
             }, fns.true);
 
             return this;
@@ -5728,26 +5849,70 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( !evt )
                 return this;
 
-            return this.each( function( evtN ) {
-                if( 'createEvent' in document ) {
-                    var doc = this.ownerDocument,
-                        evt = doc.createEvent( 'MouseEvents' );
-                    evt.initMouseEvent( evtN, true, true, doc.defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
-                    this.dispatchEvent( evt );
-                } else if( evtN in this )
+            var alias = events.getAlias(evt);
+            var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+            evt = events.getEventName(evt);
+
+
+            return this.each( function( evtN, alias, elm ) {
+                if( alias.length ) {
+                    var needleData = {};
+                    this && (needleData['element'] = this);
+                    evtN && (needleData['eventName'] = evtN);
+                    alias && (needleData['alias'] = alias);
+                    var _elmentWithNS = events.find(needleData);
+
+                    if (_z.size(_elmentWithNS) == 0) return;
+                    else
+                        return _z.for(_elmentWithNS, function (_Index, _e) {
+                            evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
+
+                            elm.callEvent(evtN);
+                        });
+                }
+
+                var _doc;
+                if( hasProp(this, 'ownerDocument')&&hasProp((_doc=this.ownerDocument), 'createEvent') || hasProp((_doc=document), 'createEvent') ) {
+                    var evt = _doc.createEvent( 'MouseEvents' );
+                    evt.initMouseEvent( evtN, true, true, _doc .defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+                    // this.dispatchEvent( evt );
+                    events.dispatch.apply(this, [evt, { element: this, eventName: evtN, alias: alias }]);
+                } else if( hasProp(this, evtN) )
                     this[ evtN ](); // IE Boss!
-            }, [ evt ] );
+            }, [ evt, alias, this ] );
         },
 
         // trigger keyboard event
         callKEvent: function callKEvent(evt,evtData) {
             var evt = evt || false;
             var evtData = evtData || false;
+
             if( !evt )
                 return this;
 
-            return this.each( function( evtN, evtD ) {
-                if( 'createEvent' in document ) {
+            var alias = events.getAlias(evt);
+            var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+            evt = events.getEventName(evt);
+
+
+            return this.each( function( evtN, evtD, alias, elm ) {
+                if( alias.length ) {
+                    var needleData = {};
+                    this && (needleData['element'] = this);
+                    evtN && (needleData['eventName'] = evtN);
+                    alias && (needleData['alias'] = alias);
+                    var _elmentWithNS = events.find(needleData);
+
+                    if (_z.size(_elmentWithNS) == 0) return;
+                    else
+                        return _z.for(_elmentWithNS, function (_Index, _e) {
+                            evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
+
+                            elm.callKEvent(evtN, evtD);
+                        });
+                }
+
+                if( hasProp(document, 'createEvent') ) {
                     var keyboardEvent = document.createEvent("KeyboardEvent");
                     var initMethod = typeof(keyboardEvent.initKeyboardEvent) !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
 
@@ -5763,11 +5928,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         evtD['keyCode']?evtD['keyCode']:0, // keyCodeArg : unsigned long the virtual key code, else 0
                         evtD['charCode']?evtD['charCode']:0 // charCodeArgs : unsigned long the Unicode character associated with the depressed key, else 0
                     );
-                    this.dispatchEvent(keyboardEvent);
+                    // this.dispatchEvent(keyboardEvent);
+                    events.dispatch.apply(this, [keyboardEvent, { element: this, eventName: evtN, alias: alias }]);
                 }
-                else if( evtN in this )
-                    this[ evtN ](); // IE Boss!
-            }, [ evt, evtData ] );
+                else if( hasProp(this, evtN) )
+                    this[ evtN ](evtD, alias); // IE Boss!
+            }, [ evt, evtData, alias, this ] );
         },
 
         // on DOM change event
