@@ -3,29 +3,6 @@
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window ) {
-// RegExp.regexes = Regexes source
-    if(typeof RegExp.regexes !== 'object') {
-        RegExp.regexes = {
-            // notInQuote: /(?=([^"\\]*(\\.|"([^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
-            notInQuote: /(?=(?:[^"\\]*(?:\\.|"(?:[^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
-            space: / +?|\t/,
-            CSSRole: /((\s*?@media[\s\S]*?){([\s\S]*?)}\s*?})|(([\s\S]*?){([\s\S]*?)})/,
-            CSSPropValue: /([a-zA-Z0-9\-\_]*)\s*:\s*(.*)\;/,
-        };
-    }
-
-// RegExp.mutli(RegExp, RegExp, ...RegExp) = multi RegExp
-    if(typeof RegExp.mutli !== 'function')
-        RegExp.mutli = function mutli(...regexes) {
-            return new RegExp('(' + regexes.map(r => r.source).join(')|(') + ')');
-        };
-
-// RegExp.setFlags(...flags) = add flags to the regex
-    if(typeof RegExp.prototype.setFlags !== 'function')
-        RegExp.prototype.setFlags = function setFlags(...flags) {
-            return new RegExp(this.source, flags.join(''));
-        };
-
 // Function.callSelf(...arguments) = Function.apply( Function, arguments )
     if(typeof Function.prototype.callSelf !== 'function')
         Function.prototype.callSelf = function() {
@@ -105,8 +82,8 @@
     // b["ID"]= 1; // [ ID = 1 ]
     // a.push(b); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ], [ ID = 1 ] ]
     // a.unique("ID"); // [ [ ID = 1 ], [ ID = 2 ], [ ID = 3 ] ]
-if(typeof Array.prototype.unique !== 'function')
-    Array.prototype.unique = function(keyUnique){
+    if(typeof Array.prototype.unique !== 'function')
+        Array.prototype.unique = function(keyUnique){
             var keyUnique = keyUnique || null;
 
             if( keyUnique === null )
@@ -215,6 +192,29 @@ if(typeof Array.prototype.unique !== 'function')
             replacement = replacement.length ? replacement[0] : "";
             replacement = (replacement===undefined || replacement===null) ? "" : replacement;
             return target.split(search).join(replacement);
+        };
+
+// RegExp.regexes = Regexes source
+    if(typeof RegExp.regexes !== 'object') {
+        RegExp.regexes = {
+            // notInQuote: /(?=([^"\\]*(\\.|"([^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
+            notInQuote: /(?=(?:[^"\\]*(?:\\.|"(?:[^"\\]*\\.)*[^"\\]*"))*[^"]*$)/,
+            space: / +?|\t/,
+            CSSRole: /((\s*?@media[\s\S]*?){([\s\S]*?)}\s*?})|(([\s\S]*?){([\s\S]*?)})/,
+            CSSPropValue: /([a-zA-Z0-9\-\_]*)\s*:\s*(.*)\;/,
+        };
+    }
+
+// RegExp.mutli(RegExp, RegExp, ...RegExp) = multi RegExp
+    if(typeof RegExp.mutli !== 'function')
+        RegExp.mutli = function mutli(...regexes) {
+            return new RegExp('(' + regexes.map(r => r.source).join(')|(') + ')');
+        };
+
+// RegExp.setFlags(...flags) = add flags to the regex
+    if(typeof RegExp.prototype.setFlags !== 'function')
+        RegExp.prototype.setFlags = function setFlags(...flags) {
+            return new RegExp(this.source, flags.join(''));
         };
 
 // variables
@@ -451,7 +451,7 @@ var
 
     // vanillas shortcuts
     vanilla = function getVanillas( $var ) {
-        return ( isset($var) ? _vanilla[ $var ] : _vanilla);
+        return ( isset($var) ? _vanilla[ $var ] : _vanilla );
     },
 
     _vanilla = {
@@ -518,7 +518,6 @@ var
 var events = {
         // addEventListener
         register: function eventListenerHandler( data ) {
-            // target, type, callback
             if( typeOfVar(data)!=varsType.o || !data['eventName'] || !data['element']) return false;
 
             var target = data['element'],
@@ -977,10 +976,10 @@ var events = {
                 } catch( e ) { xml = null; }
 
                 if( !!!xml )
-                    return console.error( "Invalid XML: " + str ), null;
+                    return fns.t.e( "Invalid XML: " + str ), null;
 
                 return xml;
-            } catch( e ) { console.error( "Parse Error:"+ e ); }
+            } catch( e ) { fns.t.e( "Parse Error:"+ e ); }
         },
         parseXML: function parseXML(htmlString) {
             return (new DOMParser()).parseFromString(htmlString,"text/xml");
@@ -1002,10 +1001,10 @@ var events = {
                     xmlhttp.open( "GET", url, false );
                     xmlhttp.send();
                     xml = xmlhttp.responseXML;
-                } catch( e ) { return console.error( "error while parssing: " + e ), null; }
+                } catch( e ) { return fns.t.e( "error while parssing: " + e ), null; }
 
                 return xml;
-            } catch( e ) { console.error( "Parse Error:"+ e ); }
+            } catch( e ) { fns.t.e( "Parse Error:"+ e ); }
         },
     },
 
@@ -1086,24 +1085,28 @@ var events = {
             return { get () { return cb( ...(args||[]) ); } };
         },
         ef: new Function(" "),
-        nan: new Function(" "),
         inputbox: function inputbox() { return prompt.apply(window, arguments) || undefined; },
         arg: function consoleArguments() { console.log.apply(console, arguments) },
         trc: function consoleTrace() { console.trace.apply(console, arguments) },
         logthis: function consoleThis() { console.log.apply(console, this) },
         log: function consoleThisAndArguments() { console.log.apply(console, [this, arguments]) },
-        alert: new Function("alert.apply(null, arguments)"),
-        'true': new Function("return true"),
-        'false': new Function("return false"),
         wrn: function consoleWarn() { console.warn.apply(console, arguments) },
         dir: function consoleDir() { console.dir.apply(console, arguments) },
         info: function consoleDir() { console.info.apply(console, arguments) },
+        confirm: function yesOrNo() {
+            this.confirm.off = !!this.confirm.off;
+            if( this.confirm.off )
+                return true;
+
+            return confirm.apply(window, arguments);
+        },
+        alert: new Function("alert.apply(null, arguments)"),
+        'true': new Function("return true"),
+        'false': new Function("return false"),
 
         toLowerCase: toLC,
-        toLC: toLC,
         toUpperCase: toUC,
-        toUC: toUC,
-        objectProp: protos.objectProp,
+
         objProp: function objProp( obj, ps ) {
             ps = ps===undefined ? [] : ps;
             var newProping = extendFunction({}, protos.objectProp);
@@ -1122,11 +1125,8 @@ var events = {
             return obj;
         },
 
-        // return v as number || 0
-        toNum: function toNumber( v ) { return Number( v )||0; },
-
-        isSetFunc: function isSetAndIsFunction( v, k ) { k = k || false;
-            return ( v && !!( k!==false ? v[k] : v ) && _z.isFunction( ( k!==false ? v[k] : v ) ) );
+        isSetisFunc: function isSetAndIsFunction( v, k ) { k = k || false;
+            return !!( v && !!( k!==false ? v[k] : v ) && _z.isFunction( ( k!==false ? v[k] : v ) ) );
         },
 
         // create new error type
@@ -1142,41 +1142,6 @@ var events = {
                 return error;
             }
             `
-            );
-        },
-
-        toggle: {
-            class: {
-                off: true,
-                _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return _z(this).toggleClass(arguments[0]);"),
-                call: function(){
-                    if(this.off)
-                        return;
-
-                    return this._call.apply( arguments[0], Array.from(arguments).slice(1) );
-                },
-            }
-        },
-        ask: {
-            off: false,
-            _call: new Function("if(!!!arguments||!!!arguments.length||fns.toggle.off) { return false; } return confirm.apply(null, arguments);"),
-            call: function(){
-                if(this.off)
-                    return true;
-
-                return this._call.apply( this._call, arguments );
-            },
-        },
-
-        // apply to function
-        callFunction: function callFunction( func, arg, $this ) {
-            $this = fns.turn( $this, this );
-            arg = arg || [];
-            func = func || fns.ef;
-            arg = !_z.isArray(arg) ? [arg] : arg;
-            return (
-                (_z.isFunction( func ) && func.apply($this, arg )) ||
-                (_z.isset( _z[func] ) && _z.isFunction( _z[func] ) && _z[func].apply($this, arg ))
             );
         },
 
@@ -1247,7 +1212,6 @@ var events = {
 
             return $return;
         },
-
 
         // throw functions
         t: {
@@ -1503,7 +1467,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     // Promiser module like promise
     var Promiser = function Promiser( callback ) {
         if( typeof(callback)!==typeof(this.push) )
-            return console.error("Promiser: argument is not Function!");
+            return fns.t.t("Promiser: argument is not Function!");
 
         this.resolving = {
             error: [],
@@ -1931,7 +1895,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         if( v.length ) $elements.add( ..._z( v ).element() );
                     }
                 });
-                $elements = $elements.unique();
+                $elements =$elements.unique();
             }
 
             // try querySelector
@@ -2212,7 +2176,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             addEL = n.addEventListener;
                         } else addEL = n.detachEvent;
 
-                        if( fns.isSetFunc( fName ) )
+                        if( fns.isSetisFunc( fName ) )
                             return addEL.apply( n, ELArgs );
 
                     });
@@ -3287,12 +3251,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var
                 op = op || false,
                 elm = op!==false?(op['elements'] = ( isset(op['elements']) ? op['elements'] : (isset(this['element'])&&this||false) )) : false;
-            if( !!!op || !!!(op['callback'] = fns.isSetFunc(op['callback'])&&op['callback'] || false) ) return false;
+            if( !!!op || !!!(op['callback'] = fns.isSetisFunc(op['callback'])&&op['callback'] || false) ) return false;
 
             elm = _z( elm );
 
-            op['result'] = fns.isSetFunc(op['result'])&&op['result'] || function(c) { return c; };
-            op['valid'] = fns.isSetFunc(op['valid'])&&op['valid'] || fns.true;
+            op['result'] = fns.isSetisFunc(op['result'])&&op['result'] || function(c) { return c; };
+            op['valid'] = fns.isSetisFunc(op['valid'])&&op['valid'] || fns.true;
 
             var result = [false];
             if( _z.is_z(elm) )
@@ -4587,7 +4551,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if( _z.isFunction( IFVal ) ) {
                         if( IFVal(e.value, e) ) e.value = val;
                     } else
-                    if( e.value == _IFVal )
+                    if( e.value == IFVal )
                         e.value = val;
 
                 } catch( err ) { }
@@ -4595,6 +4559,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             return this;
         },
+
         // element/elements value
         val: function elementValue( val ) {
 
@@ -4903,7 +4868,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
-
         // is element shown
         isShow: function isShow( ret ) {
             ret = ret || false;
@@ -4999,7 +4963,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return elmFunc.fade.apply( this, [ 'To', speed, opacity, callback ] );
         },
 
-        // animate element
+        // todo:animate element
         animate: function animate( params, speed ) {
             elm = this;
             elmFunc.elmLoop( elm, function( e ) {
@@ -5906,10 +5870,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if (_z.size(_elmentWithNS) == 0) return;
                     else
                         return _z.for(_elmentWithNS, function (_Index, _e) {
-                            evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
+                                    evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
 
-                            elm.callKEvent(evtN, evtD);
-                        });
+                                    elm.callKEvent(evtN, evtD);
+                                });
                 }
 
                 if( hasProp(document, 'createEvent') ) {
@@ -5944,7 +5908,16 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this.on("DOMSubtreeModified", func);
         },
 
-        // wait for DOM change on specifiec selector
+        // un DOM change event
+        undchange: function unBindDOMChange( func ) {
+            var arg = ["DOMSubtreeModified"];
+            if( _z.isFunction(func) )
+                arg.push(func);
+
+            return this.un(...arg);
+        },
+
+        // todo: what is this ! ;wait for DOM change on specifiec selector
         watchIn: function watchInDOMTree( forSelector, callback ) {
             var watch = this;
             if( !isset( callback ) && _z.isFunction( forSelector ) ) {
@@ -5986,11 +5959,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 var $this = this;
                 elm.each(function( i, e ){
                     // get data & no data
-                    if( !isset(e[ version ]) && getData )
-                    {
-                        $return.push( undefined );
+                    if( !isset(e[ version ]) && getData ) {
+                        $return.push( {} );
                         return;
                     }
+
                     // new data & create object
                     if( !isset(e[ version ]) )
                         e[ version ] = new_zID();
@@ -6298,6 +6271,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     'array': isArray,
                     'window': isWindow,
                     'typeof': typeof(obj),
+                    'document': !!(obj==doc || obj==doc.documentElement),
                 };
             },
 
@@ -6331,22 +6305,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // vanilla shortcut functions
         _vanilla, {
 
-        // remove from `obj` the `attr`
+        // todo: optmize remove from `obj` the `attr`
         removeFrom: function removeFrom( obj, attr ) {
             if( arguments.length == 0 )
                 return [];
 
             // array
-            if( _z.isTypes( [], obj ) )
-            {
+            if( _z.isArray( obj ) ) {
                 obj = Array.from(obj);
                 if( obj.indexOf( attr )!== -1 )
                     obj.splice( obj.indexOf( attr ), 1);
             }
 
             // object
-            if( _z.isTypes( {}, obj ) )
-            {
+            if( _z.isObject( obj ) ) {
                 var $return = _z.extend( {}, ( _z.is_z( obj ) ? obj.element() : obj ) );
                 _z.for( $return, function( $var ) {
                     if( $var == attr )
@@ -6362,9 +6334,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         isset: isset,
 
         // return v as number || 0
-        toNum: fns.toNum,
-
-        // isEmpty array, string, object
+        toNum: function toNumber( v ) { return Number( v )||0; },
+        // todo: add dom is empty; isEmpty array, string, object
         isEmpty: function isEmpty( obj ) {
             if( obj == null || !!!obj )
                 return true;
@@ -6375,7 +6346,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return _z.size( obj ) === 0;
         },
 
-        // isNotEmpty array, string, object
+        // todo: add dom is not empty; isNotEmpty array, string, object
         isNotEmpty: function isNotEmpty() {
             return !!!_z.isEmpty.apply( this, arguments );
         },
@@ -6385,6 +6356,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // is element == window
         isWindow: isWindow,
+
+        // is element== document
+        isDocument: function isDocument( element ) {
+            return !!(element==doc);//!!(element==doc || element==doc.documentElement);
+        },
 
         // (`obj` == jQuery)
         isjQuery: function isjQuery( obj ) {
@@ -6417,8 +6393,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( !( this.type( a ) === this.type( b ) ) )
                 return false;
 
-            while( !!args.length )
-            {
+            while( !!args.length ) {
                 // compare last input with last shifted item
                 if( args.length == 1 )
                     args.push( a );
@@ -6547,8 +6522,6 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                 this.fragmentsDelete();
                 return list;
-
-                return this;//.fragmentsGet();
             }
 
             // element in DOM tree
@@ -6597,7 +6570,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return array1.length;
         },
 
-        // DOM Node Types
+        // todo: what is this for ?; DOM Node Types
         nodesTypes: {
             query: function query( rootNode, isDeepSearch ) {
                 var nodeTypesObjects = [],
@@ -6615,7 +6588,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             document: window.document.DOCUMENT_NODE || 9
         },
 
-        // get HTMLNodes by types
+        // todo: what is this for ?; get HTMLNodes by types
         HTMLNodes: function HTMLNodes( rootNode, isDeepSearch, nodeType ) {
             var _nodes = [],
                 node = rootNode&&rootNode.firstChild || document.body.firstChild,
@@ -6644,9 +6617,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
     // _z features
     [ _z, {
-        // _z.embed.data(["./test/11.jpg", function (aa) { a = aa; }] )
+        // _z.URLToData( url_to_get, function_callback)
         // convert url to data base64
-        toDataURL: function toDataURL(url, callback) {
+        URLToData: function URLToData(url, callback) {
             try {
                 var xhr = new XMLHttpRequest();
                 xhr.onload = function () {
@@ -6662,6 +6635,18 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             } catch (e) {
 
             }
+        },
+        // _z.stringToData(string, function_callback, content_type)
+        // convert string to data base64
+        stringToData: function stringToData(string, callback, type) {
+            try {
+                var blob = new Blob([string], { type: type || 'plain/text' });
+                var reader = new FileReader();
+                reader.onload = ()=>callback(reader.result);
+                reader.readAsDataURL(blob);
+            } catch (e) {
+
+            }
         }
     }, {
         // selector, action, prevent true||false
@@ -6670,14 +6655,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 a = a || '*',
                 p = p || false;
 
-            if(a.indexOf(' ')>=0)
+            if( a.indexOf(' ') >= 0 )
                 a = a.split(' ');
 
-            if(a instanceof Array)
-            {
-                if(a.length==0)
-                {
-                    console.error("Unknown Action: "+a.join(' '));
+            if(a instanceof Array) {
+                if( a.length == 0 ) {
+                    fns.t.r("Unknown Action: "+a.join(' '));
                     return this;
                 }
                 a.forEach(function(e) {
@@ -6687,14 +6670,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 return this;
             }
 
-            if(s.indexOf(' ')>=0)
+            if( s.indexOf(' ') >= 0 )
                 s = s.split(' ');
 
-            if(s instanceof Array)
-            {
-                if(s.length==0)
-                {
-                    console.error("Unknown Selector: "+s.join(' '));
+            if(s instanceof Array) {
+                if( s.length==0 ) {
+                    fns.t.r("Unknown Selector: "+s.join(' '));
                     return this;
                 }
                 s.forEach(function(e) {
@@ -6706,47 +6687,38 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             var elm = _z(s);
 
-            switch(a)
-            {
+            switch(a) {
                 case "*":
                 case "selection":
-                    elm.selection(!p?1:0);
+                    elm.selection( !p ? 1 : 0);
                     if(a!='*')
                         break;
 
                 case "*":
                 case "cut":
                     elm.un("cut");
-                    if(p)
-                    {
-                        elm.on("cut", function(e){
+                    p && elm.on("cut", function(e){
                             e.preventDefault();
                         });
-                    }
                     if(a!='*')
                         break;
 
                 case "*":
                 case "copy":
                     elm.un("copy");
-                    if(p)
-                    {
-                        elm.on("copy", function(e){
+                    p && elm.on("copy", function(e){
                             e.preventDefault();
                         });
-                    }
                     if(a!='*')
                         break;
 
                 case "*":
                 case "contextmenu":
                     elm.un("contextmenu");
-                    if(p)
-                    {
-                        elm.on("contextmenu", function(e){
+                    p && elm.on("contextmenu", function(e){
                             e.preventDefault();
                         });
-                    }
+
                     if(a!='*')
                         break;
 
@@ -6757,17 +6729,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         break;
 
                 default:
-                    if(a!='*')
-                        console.error("Unknown Action: "+a);
-                    break;
+                    if( a!='*' )
+                        fns.t.r("Unknown Action: "+a);
             }
 
-            if(!_z.document.isReady)
-            {
+            if( !_z.document.isReady || !_z.document.isReady() )
                 _z.ready(function(){
                     _z.prevent(s, a, !p);
                 });
-            }
 
             return this;
         },
@@ -6776,12 +6745,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         document: {
             // get document Status
             status: function documentStatus() {
-                return document.readyState;
+                return doc.readyState;
             },
 
             // document is ready ?
             isReady: function documentIsReady() {
-                return (document.readyState==='complete');
+                return ( doc.readyState === 'complete' );
             },
 
         },
@@ -6794,18 +6763,17 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // get variables from location
         _GET: function _GET( variable ) {
-            if( !!!(location && doc.location) )
-                return false;
+            if( !!!(location && doc.location) ) return false;
 
             try {
-                q = (location||doc.location).search.substring( 1 ),
-                    asArray = {},
+                var q = ( location||doc.location ).search.substring( 1 ),
+                    asArray = [],
                     p = [],
                     getAll = ( !!!variable );
 
-                v = q.split("&");
+                var v = q.split( "&" );
                 for( var i = 0, iv = v.length; i < iv; i++ ) {
-                    p = v[ i ].split("=");
+                    p = v[ i ].split( "=" );
                     p[1] = ( p[1].indexOf('%20') != -1 ) ? decodeURIComponent( p[1] ) : p[1];
 
                     if( getAll )
@@ -6905,7 +6873,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if( tag=='data' ) {
                         try {
                             if(cb && _z.isFunction(cb)) {
-                                return _z.toDataURL(url, cb);
+                                return _z.URLToData(url, cb);
                             }
                         } catch (_err) {  }
                         return false;
@@ -6957,7 +6925,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // eval function when document is ready
         ready: function ready( fn, load ) {
-            var d = document,
+            var d = doc,
                 w = window,
                 load = load || false;
 
@@ -6981,7 +6949,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 }
             };
 
-            switch ( d.readyState+(load?'1':'0') ) {
+            switch ( d.readyState + ( load ? '1' : '0' ) ) {
                 // The document has finished loading. We can now access the DOM elements.
                 // But sub-resources such as images, stylesheets and frames are still loading.
                 case "interactive0":
@@ -6989,13 +6957,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     break;
 
                 // The page is fully loaded.
-                case "complete"+(load?'1':'0'):
+                case "complete" + ( load ? '1' : '0' ):
                     fn();
                     break;
 
                 // case "loading"+(load?'1':'0'): // The document is still loading.
                 default:
-                    if(d.addEventListener) {
+                    if( d.addEventListener ) {
                         d.addEventListener('readystatechange', $DOMContentLoaded , false );
                         w.addEventListener('load', $DOMContentLoaded , false );
                     } else {
@@ -7068,7 +7036,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         }
     } ].mix;
 // _z }
-// disable [_z, {}].mix
+// disable [_z, {}].extend
     // _z.extend.status = false;
     _z.extend.status = true;
 
