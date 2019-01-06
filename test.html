@@ -84,16 +84,6 @@
     </script>
 </head>
 <body>
-<script type="application/json" sss  >
-    console.warn("_______file 2 code2.js");
-    _z.hash("_______hey" + fns.time("s"));
-</script>
-
-<script type="application/json" sss  >
-    console.error("_______file 1 code.js");
-    document.title = "_______code.js";
-</script>
-
 <script type="text/javascript">
     // notification example
     /*var notify = new _z.notification({
@@ -105,65 +95,52 @@
     }).open();*/
 </script>
 
-<script>
-
-    _z(function() {
-
-
-
-        // mousein event
-        function hoverin() {
-            _z(".p3").html( "IN:" + _z(this).attr("class") + " line" );
-            _z(this).css("background-color", "lightblue");
-        }
-// mouseout event
-        function hoverout() {
-            _z(".p3").html( "OUT:" + _z(this).attr("class") + " line" );
-            _z(this).css("background-color", "lightgray");
-        }
-
-// bind mouse out event by element class
-        _z(".p1").hover(false, hoverout);
-
-// bind mouse in event by element tag - this will bind the event with all elements with "p" tag.
-        _z("p").hover(hoverin);
-
-// bind mouse in/out event by element class
-        _z(".p3").hover(hoverin, hoverout);
-
-// unbind mouse out event by element class.
-        _z("#btn1").click(function () {
-            _z(".p1").un("hover", hoverout);
-        });
-// unbind mouse in event by element class.
-        _z("#btn2").click(function () {
-            _z(".p2").un("hover", hoverin);
-        });
-// unbind mouse in event by element class.
-        _z("#btn3").click(function () {
-            _z(".p3").un("hover", [ hoverin, hoverout ]);
-// or
-//	_z(".p3").un("hover");
-        });
-
-
-
-    });
-</script>
-
-<label id="label">Label</label>
-<input type="text" value="Text" id="text">
 <button id="button">Show Message & Change Title</button>
 <button class="btnCTitle">Change Title</button>
 <button class="btnUBEvent">Unbind "Change Title" event</button>
 
-<p class="p1">p1 line</p>
-<p class="p2">p2 line</p>
-<p class="p3">p3 line</p>
+<script>
+    // bind click event by element id
+    _z("#button").click(function () {
+        alert("Button clicked!");
+    });
 
-<button id="btn1">Remove first line hover out</button>
-<button id="btn2">Remove second line hover in</button>
-<button id="btn3">Remove third line hover in/out</button>
+    // bind click event by element tag - this will bind the event with all elements with "button" tag.
+    _z("button").click(function () {
+// set title as clicked button text
+        document.title = _z(this).text();
+    });
+
+    // unbind click event by element class.
+    _z(".btnUBEvent").click(function () {
+        _z(".btnCTitle").un("click");
+    });
+
+
+    // trigger click event
+    // _z(".btnCTitle").click(); // change document title to 'Change Title'
+    // _z("#button").click(); // alert 'Button clicked!' and change document title to 'Show Message & Change Title'
+    // _z(".btnUBEvent").click(); // change document title to 'Unbind "Change Title" event' and unbind click event on .btnCTitle button
+</script>
+<label id="label">Label</label>
+<span id="span1">
+    <input type="text" value="Text" id="text1">
+    <span id="span2">
+        <input type="text" value="Text2" id="text2">
+    </span>
+</span>
+
+<button id="buttont">Show Message & Change Title</button>
+<button class="btnCTitlet">Change Title</button>
+<button class="btnUBEventt">Unbind "Change Title" event</button>
+
+<p class="p1t">p1 line</p>
+<p class="p2t">p2 line</p>
+<p class="p3t">p3 line</p>
+
+<button id="btn1t">Remove first line hover out</button>
+<button id="btn2t">Remove second line hover in</button>
+<button id="btn3t">Remove third line hover in/out</button>
 
 
 
