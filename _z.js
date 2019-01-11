@@ -289,6 +289,15 @@ var
         );
     },
 
+    // `val` in `obj` - public function in _z.hasVar( Object, var), _z(Object).hasVar(var) = true | false
+    hasVar = function hasVar( obj, val ) {
+        try {
+            return val in obj;
+        } catch (e) {
+            return false;
+        }
+    },
+
     // all `val` in `obj` - function in fns.getProtos( Object ), hooked to Objects: Object.getProtos()
     getProtos = Object.getPrototypeOf,
 
@@ -645,7 +654,7 @@ var events = {
         dispatch: function dispatchEvent( event, data ) {
             if( !event || !(e=this)) return false;
 
-            if( hasProp(e, 'dispatchEvent') )
+            if( e instanceof EventTarget )
                 return e.dispatchEvent(event);
             else {
                 var _elmentWithNS = events.find( data||{
@@ -2978,6 +2987,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( _z.isDOM( trimmedContext ) && trimmedContext['textContent'])
                 trimmedContext = trimmedContext.textContent || trimmedContext;
 
+            try {
+                if( !trimmedContext.length && t.call( trimmedContext ).length )
+                    return trimmedContext = t.call( trimmedContext );
+            } catch (e) {
+
+            }
+
             if( trimmedContext.length ) return t.call( trimmedContext );
 
             return trimmedContext;
@@ -3142,6 +3158,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     var __zFunctions = {
         // object.hasOwnProperty
         hasProp: hasProp,
+
+        // var in obj
+        hasVar: hasVar,
 
         /**
          * Get the closest matching element up the DOM tree.
@@ -5603,12 +5622,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             var event = document.createEvent('HTMLEvents');
                             event.initEvent(eventName, true, false);
                             try {
-                                if( hasProp(e, eventName) && _z.isFunction(e[eventName]) )
-                                    e[eventName](event, alias);
+                                // if( hasVar(e, eventName) && _z.isFunction(e[eventName]) )
+                                //     e[eventName](event, alias);
+                                // else
+                                    events.dispatch.apply(e, [event, _e]);
                             } catch (er) {
                                 console.error(er);
                             }
-                            events.dispatch.apply(e, [event, _e]);
                             // e.dispatchEvent(event);
                         });
                         return this;
@@ -5623,13 +5643,15 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 event.initEvent(eventName, true, false);
 
                 try {
-                    if( hasProp(e, eventName) && _z.isFunction(e[eventName]) )
-                        e[eventName](event, alias);
+                    // if( hasVar(e, eventName) && _z.isFunction(e[eventName]) )
+                    //     e[eventName](event, alias);
+                    // else
+                    // todo: must try to call element.eventname first
+                        events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
                 } catch (er) {
                     console.error(er);
                 }
                 // e.dispatchEvent(event);
-                events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
 
             }, fns.true);
 
@@ -5828,12 +5850,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 }
 
                 var _doc;
-                if( hasProp(this, 'ownerDocument')&&hasProp((_doc=this.ownerDocument), 'createEvent') || hasProp((_doc=document), 'createEvent') ) {
+                if( hasVar(this, 'ownerDocument')&&hasVar((_doc=this.ownerDocument), 'createEvent') || hasVar((_doc=document), 'createEvent') ) {
                     var evt = _doc.createEvent( 'MouseEvents' );
                     evt.initMouseEvent( evtN, true, true, _doc .defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
                     // this.dispatchEvent( evt );
                     events.dispatch.apply(this, [evt, { element: this, eventName: evtN, alias: alias }]);
-                } else if( hasProp(this, evtN) )
+                } else if( hasVar(this, evtN) )
                     this[ evtN ](); // IE Boss!
             }, [ evt, alias, this ] );
         },
@@ -5868,7 +5890,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                                 });
                 }
 
-                if( hasProp(document, 'createEvent') ) {
+                if( hasVar(document, 'createEvent') ) {
                     var keyboardEvent = document.createEvent("KeyboardEvent");
                     var initMethod = typeof(keyboardEvent.initKeyboardEvent) !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
 
@@ -5887,7 +5909,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     // this.dispatchEvent(keyboardEvent);
                     events.dispatch.apply(this, [keyboardEvent, { element: this, eventName: evtN, alias: alias }]);
                 }
-                else if( hasProp(this, evtN) )
+                else if( hasVar(this, evtN) )
                     this[ evtN ](evtD, alias); // IE Boss!
             }, [ evt, evtData, alias, this ] );
         },

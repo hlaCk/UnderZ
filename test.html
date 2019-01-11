@@ -27,14 +27,22 @@
 		 
         // when document ready
         _z.ready(()=>{
-			// apply plugin
-			_z('.p1t, [inlineEdit]').inlineEdit({
+			// apply plugin input
+			_z('.p1t').inlineEdit({
 				blur: false,
+				bottons: false
+			});
+			
+			// apply plugin textarea
+			_z('[inlineEdit]').inlineEdit({
+				blur: true,
 				allowEmpty: true,
-				maxLength: 5,
-				showBtns: false,
+				maxLength: 50,
+				bottons: true,
+				inputMode: "textarea",
 				submit: function(element, newValue) {
-					element.text( newValue );
+					console.log(newValue);
+					return newValue.replaceAll("\n", "[LINE]");
 				}
 			});
 			
@@ -87,6 +95,9 @@
     <input type="text" value="Text" id="text1">
     <span id="span2">
         <input type="text" value="Text2" id="text2">
+		<span id="span3">
+			<textarea id="textarea">Textarea</textarea>
+		</span>
     </span>
 </span>
 
