@@ -1,8 +1,8 @@
-// UnderZ 1.0.0 - JavaScript Library
+// UnderZ 1.0.1 - JavaScript Library
 // Copyright © 2008-2019 hlaCk (https://github.com/hlaCk)
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
-(function( window ) {
+(function( window, document ) {
 // Function.callSelf(...arguments) = Function.apply( Function, arguments )
     if(typeof Function.prototype.callSelf !== 'function')
         Function.prototype.callSelf = function() {
@@ -49,6 +49,12 @@
 // Array.pushSetter='value' => Array.push( 'value' )
     if(typeof Array.prototype.pushSetter !== 'function')
         Object.defineProperty( Array.prototype, 'pushSetter', { set: function(v) { return this.push(v); }, configurable: false} );
+
+// Object.getSize => size of object
+    if(typeof Object.prototype.getSize !== 'function')
+        Object.prototype.getSize = function( o ) { o = o || this;
+            return _z.size(o);
+        };
 
 // Object.getType => type of object lowerCase
     if(typeof Object.prototype.getType !== 'function')
@@ -217,13 +223,29 @@
             return new RegExp(this.source, flags.join(''));
         };
 
+// is it real document
+if( !("isdocument" in document) )
+    document.isdocument = true;
+
 // variables
 var
     // window - private var
     window = window || this,
 
     // document - private var
-    doc = window.document || this.document || document,
+    doc = window.document || this.document || document || this,
+
+    // empty function
+    emptyFunction = new Function(" "),
+
+    // function return true
+    trueFunction = ()=>true,
+
+    // function return false
+    falseFunction = ()=>false,
+
+    // read HTMLCollection
+    HTMLCollection = !window['HTMLCollection'] ?  emptyFunction : window['HTMLCollection'],
 
     // global variable - public var for private use in window.gVar
     gVar = window.gVar || (window.gVar = gVar = {}),
@@ -232,13 +254,13 @@ var
     globaljQuery = window["jQuery"] || new Function("return false"),
 
     // engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
-    version = '1.0.0',
+    version = '1.0.1',
 
     // prototypes of objects - public var in _z.privates.protos
     protos = {
-        object: Object.prototype,
-        element: Element.prototype,
-        array: Array.prototype,
+        object: "Object" in window ? Object.prototype : ()=>{},
+        element: "Element" in window ? Element.prototype : ()=>{},
+        array: "Array" in window ? Array.prototype : ()=>{},
         likeArray: {
             push: [].push,
             sort: [].sort,
@@ -449,37 +471,8 @@ var
         } else return _z( result );
     },
 
-    // vanillas shortcuts
-    vanilla = function getVanillas( $var ) {
-        return ( isset($var) ? _vanilla[ $var ] : _vanilla );
-    },
-
-    _vanilla = {
-        vanilla: vanilla,
-        window: window,
-        document: doc,
-        body: doc.body,
-        root: doc.getRootNode.bind(doc),
-        head: doc.head,
-        title: doc.title,
-
-        compStyle: (window.getComputedStyle || getComputedStyle),
-
-        byID: doc.getElementById.bind(doc),
-        byClass: doc.getElementsByClassName.bind(doc),
-        byName: doc.getElementsByName.bind(doc),
-        byTag: doc.getElementsByTagName.bind(doc),
-
-        w: doc.write.bind(doc),
-        wln: doc.writeln.bind(doc),
-
-        qsa: doc.querySelectorAll.bind(doc),
-        qs: doc.querySelector.bind(doc),
-
-        elm: doc.createElement.bind(doc),
-        attr: doc.createAttribute.bind(doc),
-        comment: doc.createComment.bind(doc),
-    },
+    // values of all CSS properties of an element
+    compStyle = (window.getComputedStyle || falseFunction),
 
     // clone object
     cloneObj = function cloneObj( obj ) {
@@ -926,6 +919,8 @@ var events = {
         html: function() { return parssing.parseHTML.apply(parssing, arguments); },
         parseHTML: function parseHTML( str ) {
             try{
+                if( doc.isdocument !== true ) return;
+
                 var tmp = document.implementation.createHTMLDocument();
                 tmp.body.innerHTML = str;
                 return tmp.body.children;
@@ -934,6 +929,8 @@ var events = {
         // text to html node list
         parseHTMLNode: function parseHTMLNode( str ) {
             try{
+                if( doc.isdocument !== true ) return;
+
                 var tmp = document.implementation.createHTMLDocument();
                 tmp.body.innerHTML = str;
                 return tmp.body.childNodes;
@@ -1084,7 +1081,7 @@ var events = {
         propertyGetter: function( cb, args ) {
             return { get () { return cb( ...(args||[]) ); } };
         },
-        ef: new Function(" "),
+        ef: emptyFunction,
         inputbox: function inputbox() { return prompt.apply(window, arguments) || undefined; },
         arg: function consoleArguments() { console.log.apply(console, arguments) },
         trc: function consoleTrace() { console.trace.apply(console, arguments) },
@@ -1101,8 +1098,8 @@ var events = {
             return confirm.apply(window, arguments);
         },
         alert: new Function("alert.apply(null, arguments)"),
-        'true': new Function("return true"),
-        'false': new Function("return false"),
+        'true': trueFunction,
+        'false': falseFunction,
 
         toLowerCase: toLC,
         toUpperCase: toUC,
@@ -1677,7 +1674,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
     // _z engine
     var _z = function _z() {
-        $this = (this && this.window === this) ? _z : this;
+        $this = (this && this.window === this) ? _z : ( !this['window'] ? _z : this );
 
         if( arguments.length == 1 && arguments[0] instanceof _z ) return arguments[0];
 
@@ -2661,8 +2658,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             // get style
             if( $var&&!!!_z.isObject( $var ) ) {
                 $var = _z.privates.prepareCSS( _z($var) );
-                var $return=[],
-                    compStyle = vanilla( 'compStyle' );
+                var $return=[];
 
                 elmFunc.elmLoop( elm, function( e ) {
                     if( isset($val) ) {
@@ -2808,10 +2804,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( elm.len || elm.length ) {
                 ( elm.len ? elm : _z(elm) ).each(function() {
                     if( _z.isDOM( this ) ) {
-                        var display,
-                            compStyle = vanilla('compStyle');
+                        var display;
                         if( displayStyle == 'toggle' )
-                            display = (compStyle ? compStyle(this, null) : this.currentStyle).display == 'none' ?
+                            display = (compStyle(this, null)||this.currentStyle).display == 'none' ?
                                 ( _z(this).defaultDisplayStyle()||'' ) : 'none';
                         else
                             display = ( displayStyle || ( _z(this).defaultDisplayStyle()||'' ) );
@@ -2849,7 +2844,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             var testEl = doc.createElement(tag);
             doc.documentElement.appendChild(testEl);
-            var display = (vanilla('compStyle') ? vanilla('compStyle')(testEl, null) : testEl.currentStyle).display
+            var display = (compStyle(testEl, null)||testEl.currentStyle).display
             iframe.parentNode.removeChild(iframe);
 
             gVar["defaultDisplayStyleLog"][ tag ] = display;
@@ -3127,26 +3122,18 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 var resp;
 
                 elmFunc.elmLoop( _z(e), ( elem ) => {
-                    if( _z(elem).attr("src") && elem.src )
-                        resp = _z.ajax({
-                            url: elem.src,
-                            type: "GET",
-                            data: "",
-                            dataType: "script",
-                            async: true,
-                            // done: function(respText) {
-                            // resp = _z.globaleval( ( respText || "" ).replace( /^\s*<!(?:\[CDATA\[|\-\-)/, "/*$0*/" ) );
-                            // }
-                        });
-                    else
+                    if( elem.src ) {
+                        _z.ready({ ajax: _z._URL_(elem.src) });
+                    } else {
                         resp = _z.globaleval( ( elem.text || elem.textContent || elem.innerHTML || "" ).replace( /^\s*<!(?:\[CDATA\[|\-\-)/, "/*$0*/" ) );
-                });
+                    }
+                }, (x)=>_z.isObject(x)&&x['src']||_z(x).isDOMElement( true ));
             } catch(eEval) {
                 console.error(eEval);
                 resp = false;
             }
 
-            return resp;//this;
+            return resp;
         },
 
     }].mix;
@@ -3625,7 +3612,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                 this.global.registered = true;
                 return this.hook( window );
-                var w = _vanilla.window&&_vanilla.window || window;
+                var w = window;
                 if( !_z.isWindow(w) ) return console.error("UnderZ[" + this.id + "]: No Window Found."), this;
 
                 if( _z.isset(w[ this.id ]) ) return console.error("UnderZ[" + this.id + "]: Already Exist!"), this;
@@ -3675,6 +3662,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 if(!!method && _z.isFunction( method ))
                     this.callback = method;
 
+                // check if load request sent
+                if( this.loaded && this.loaded === true )
+                    this.init(fns.true);
+
+                // console.log('method1', this);
                 return this;
             },
 
@@ -3687,10 +3679,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 return this;
             },
 
+            // todo: load method when called
             // try to load requirments
             loadDeclare: function loadDeclare() {
                 var module = this || false;
-
                 if( !!!module || module.loaded ) return this.callback||this;
 
                 if( module.whenRequest.apply( module ) === false ) return this;
@@ -3713,7 +3705,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 }
                 this.loaded = true;
 
-                return this.callback||this;//this;
+                return this.callback||this;
             },
 
             // declare new module in specifiec object
@@ -5345,7 +5337,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         bottom: 0,
                         right: 0,
                     };
-                    var style = vanilla( 'compStyle' )(e);
+                    var style = compStyle(e)||e.currentStyle;
                     tResult = {
                         top: (rect.top||0) + (scrolls? (document.body.scrollTop||0) : 0),
                         right: (rect.right||0),
@@ -6301,10 +6293,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     } ].mix;
 
     // Objects function
-    [ _z,
-        // vanilla shortcut functions
-        _vanilla, {
-
+    [ _z, {
         // todo: optmize remove from `obj` the `attr`
         removeFrom: function removeFrom( obj, attr ) {
             if( arguments.length == 0 )
@@ -6581,11 +6570,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 });
                 return nodeTypesObjects;
             },
-            element: window.document.ELEMENT_NODE || 1,
-            attr: window.document.ATTRIBUTE_NODE || 2,
-            text: window.document.TEXT_NODE || 3,
-            comment: window.document.COMMENT_NODE || 8,
-            document: window.document.DOCUMENT_NODE || 9
+            element: doc.ELEMENT_NODE || 1,
+            attr: doc.ATTRIBUTE_NODE || 2,
+            text: doc.TEXT_NODE || 3,
+            comment: doc.COMMENT_NODE || 8,
+            document: doc.DOCUMENT_NODE || 9
         },
 
         // todo: what is this for ?; get HTMLNodes by types
@@ -6617,9 +6606,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
     // _z features
     [ _z, {
-        // _z.URLToData( url_to_get, function_callback)
+        // _z.URLToBlob64( url_to_get, function_callback)
         // convert url to data base64
-        URLToData: function URLToData(url, callback) {
+        URLToBlob64: function URLToBlob64(url, callback) {
             try {
                 var xhr = new XMLHttpRequest();
                 xhr.onload = function () {
@@ -6636,9 +6625,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             }
         },
-        // _z.stringToData(string, function_callback, content_type)
+        // _z.stringToBlob64(string, function_callback, content_type)
         // convert string to data base64
-        stringToData: function stringToData(string, callback, type) {
+        stringToBlob64: function stringToBlob64(string, callback, type) {
             try {
                 var blob = new Blob([string], { type: type || 'plain/text' });
                 var reader = new FileReader();
@@ -6797,6 +6786,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             } catch (e) { return false; }
         },
 
+        // get current url location
+        _URL_: function _URL_(f) { f = f || false;
+            try {
+                if( f && f.indexOf("://") > -1 ) return f;
+
+                var _URL_ = _z._FILE_()&&(window.location.href.indexOf(_z._FILE_())>-1)&&location.href.split(_z._FILE_())[0]||location.href.toString();
+                if( f ) {
+                    _URL_ += (_URL_.substr(-1) == "/" ? "" : "/");
+                    _URL_ = ( f.indexOf("://") > -1 ) ? f : _URL_ + f;
+                }
+                return _URL_;
+            } catch (e) { return false; }
+        },
+
         // return css selector from dom element
         cssSelector: cssSelector,
 
@@ -6857,6 +6860,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if( (document.readyState!=='complete' && tag=='script') || ((loadInBody=true) && tag=='script')) {
                         return new Promise(function(resolve, reject) {
                             try {
+                                // _z.execScript({ src: url });
                                 _z( loadInBody ? "body" : "head" ).append('<script type="text/javascript" class="_z-loader" src="'+url+'"></script>');
                             } catch (_err) { reject(err); }
 
@@ -6866,14 +6870,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                             resolve(true);
                         });
-
-                        // return true;
+                    } else {
+                        // todo: when this code is active
+                        console.log([
+                            document.readyState,
+                            tag,
+                            cb,
+                            url
+                        ]);
                     }
 
                     if( tag=='data' ) {
                         try {
                             if(cb && _z.isFunction(cb)) {
-                                return _z.URLToData(url, cb);
+                                return _z.URLToBlob64(url, cb);
                             }
                         } catch (_err) {  }
                         return false;
@@ -6897,7 +6907,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         // Need to set different attributes depending on tag type
                         switch(tag) {
                             case 'script':
-                                element.async = true;
+                                element.async = false;
                                 break;
                             case 'link':
                                 element.type = 'text/css';
@@ -6922,21 +6932,105 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         })()
 
     }, {
+        ready_Blobs: {
+            ajax: ()=>{ return [
+                "importScripts('"+_z._URL_("_z.js")+"');",
+                `self.onmessage = function (event) { var rr=self.postMessage; _z.ajax({ url: event.data.url, type: "GET", dataType: "text", async: false, success: function(a,x){ x.onloadend=function(){ rr(this.responseText); }; }, }); };`
+            ] },
+            return: ()=>[ `self.onmessage = function (event) { self.postMessage(event.data); };` ]
+        },
+        ready_workers: { 'return': [], 'ajax': [] },
+        runWorker: function runWorker() {
+            var wArray;
+            var a1 = $this.ready_workers[(wArray='ajax')].filter(x=>!(x===false||!(!x['isCalled']||!x['isDone'])));
+            if( !a1.getSize() ) {
+                if( !$this.ready_workers[(wArray='return')].filter(x=>!(x===false||x['isCalled'])).getSize() ) return 0;
+            }
+
+            var totalRun = 0;
+            _z.for($this.ready_workers[wArray], function (i, w) {
+                if( !!!w || (!!w['isCalled']) ) return;
+
+                if( w['send'] && _z.isFunction(w['send']) ) {
+                    $this.ready_workers[wArray][i].send();
+                    $this.ready_workers[wArray][i]['isCalled'] = true;
+                    totalRun++;
+                }
+
+                return false;
+            });
+
+            return totalRun;
+        },
+        newWorker: function newWorker( type ) {
+            type = type || 'return';
+            var $this = this;
+
+            var _worker = { type: type },
+                wType = ($this.ready_workers[type] ? type : 'return'),
+                thisIndx = $this.ready_workers[wType].push( _worker );
+
+            _worker.worker = new Worker( window.URL.createObjectURL( new Blob((this.ready_Blobs[ type ] || fns.ef)(), { type: 'application/javascript' }) ) );
+            _worker.terminate = function() {
+                if( _z.isFunction(_worker['done']) )
+                    try {
+                        _worker['done']();
+                    } catch(fnError) { console.error(fnError); }
+
+                $this.ready_workers[wType][thisIndx-1] = false;
+                _worker.worker.terminate();
+                _worker = {};
+            };
+
+            _worker.worker.onmessage = function(event) {
+                var respText = event.data;
+
+                if(respText && type == 'ajax')
+                    resp = _z.ajaxSettings.converters.script( ( respText || "" ).replace( /^\s*<!(?:\[CDATA\[|\-\-)/, "/*$0*/" ) );
+
+                _worker.terminate();
+            };
+            _worker.worker.onerror = function () {
+                console.error(...arguments);
+                _worker.terminate();
+            };
+            _worker.send = function(data) {
+                _worker.worker.postMessage(data||"");
+            };
+            return _worker;
+        },
 
         // eval function when document is ready
-        ready: function ready( fn, load ) {
+        ready: function ready( fn ) {
             var d = doc,
                 w = window,
-                load = load || false;
+                $this = this;
 
-            if( !_z.isFunction( fn ) ) return this;
+            if( !_z.isFunction( fn ) ) {
+                if( _z.isObject(fn) && fn['ajax'] ) {
+                    var worker = $this.newWorker('ajax');
+                    var worker_send = worker.send;
+                    worker['isDone'] = false;
+                    worker['isCalled'] = false;
+                    worker.send = function() {
+                        worker_send({ url: fn['ajax'] });
+                    };
+                    worker.done = ()=>{ worker['isDone'] = true; };
+                } else return $this;
+            } else {
+                var worker = $this.newWorker('return');
+                worker['isDone'] = false;
+                worker['isCalled'] = false;
+                worker.done = ()=>{ fn(); worker['isDone'] = true; };
+            }
 
             var $DOMContentLoaded = function() {
-                if( d.readyState != 'loading' )
-                    if( ( !load&&d.readyState == 'interactive' ) || d.readyState == 'complete') {
-                        fn();
+                if(d.readyState == 'complete') {
+                    if( $this.runWorker() == 1 )
                         cleanLoadinEvents();
-                    }
+                    else
+                        setTimeout($DOMContentLoaded, 16);
+                }
             };
 
             var cleanLoadinEvents = function() {
@@ -6949,19 +7043,19 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 }
             };
 
-            switch ( d.readyState + ( load ? '1' : '0' ) ) {
+            switch ( d.readyState ) {
                 // The document has finished loading. We can now access the DOM elements.
                 // But sub-resources such as images, stylesheets and frames are still loading.
-                case "interactive0":
-                    fn();
+                case "interactive":
+                    $DOMContentLoaded();
                     break;
 
                 // The page is fully loaded.
-                case "complete" + ( load ? '1' : '0' ):
-                    fn();
+                case "complete":
+                    $DOMContentLoaded();
                     break;
 
-                // case "loading"+(load?'1':'0'): // The document is still loading.
+                // case "loading": // The document is still loading.
                 default:
                     if( d.addEventListener ) {
                         d.addEventListener('readystatechange', $DOMContentLoaded , false );
@@ -6974,15 +7068,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     break;
             }
 
-            return this;
+            return $this;
         },
 
-        // eval function when document load
-        load: function load( fn ) {
-            if( !_z.isFunction( fn ) ) return this;
-
-            return this.ready( fn, true );
-        }
     } ].mix;
 
     // declare system
@@ -7044,11 +7132,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     window._z = _z;
 
 // bind load function
-    ( !window._1 )&&(window._1 = _z.load.bind(_z));
-
-// bind ready function
-    ( !window._2 )&&(window._2 = _z.ready.bind(_z));
-
+    ( !window._1 )&&(window._1 = _z.ready.bind(_z));
 
     if( typeof define === "function" && define.amd && define.amd._z )
         define( "_z", [], function () { return _z; } );
@@ -7062,4 +7146,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     typeOfVar.varsType = varsType;
     _z.typeOfVar = typeOfVar;
     return _z;
-})( this );
+})( this, this.document || {
+    isdocument: false,
+    getRootNode: ()=>{},
+    ELEMENT_NODE: 1,
+    ATTRIBUTE_NODE: 2,
+    TEXT_NODE: 3,
+    COMMENT_NODE: 8,
+    DOCUMENT_NODE: 9
+} );

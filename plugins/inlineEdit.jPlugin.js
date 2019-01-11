@@ -203,14 +203,3 @@
     return IE.$.inlineEdit;
 }));
 
-// _z('p').inlineEdit();
-// _z('.p1t').inlineEdit({
-	// blur: false,
-	// allowEmpty: true,
-	// maxLength: 5,
-	// showBtns: false,
-	// submit: function(element, newValue) {
-		// element.text( newValue );
-	// }
-// });
-

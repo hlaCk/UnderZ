@@ -18,73 +18,26 @@
     </script>
 
     <script type="text/javascript">
+						
+		// load plugin: inlineEdit
+		 _z
+			 .declare('inlineEdit', _z.$)
+			 .require({ js: [ './plugins/inlineEdit.jPlugin.js' ] })
+			 .init(fns.true); 
+		 
         // when document ready
         _z.ready(()=>{
-			// load plugin: inlineEdit
-             _z
-                 .declare('inlineEdit', _z.$)
-                 .require({ js: [ './plugins/inlineEdit.jPlugin.js' ] })
-                 .init(fns.true);
-
-            /* // load plugin: toggle blocks by click
-             _z
-                 .declare('toggleByClick', _z.$)
-                 .require({ js: [ './plugins/togglebyclick.jPlugin.js' ] })
-                 .hook( _z )
-                 .init(fns.true);
-       /*
-                     // worker
-                     _z
-                         .declare('worker')
-                         .require({ js: [ './plugins/worker.jPlugin.js' ] })
-                         .init(()=>{return !!(document.querySelectorAll("script[type^='text\/_z-\']").length); });
-
-                     // issetAnd
-                     _z
-                         .declare('issetAnd')
-                         .require({ js: [ './plugins/issetAnd.jPlugin.js' ] })
-                         .init(fns.false);
-
-                     // sizeFormat * addon
-                     _z
-                         .declare('sizeFormat')
-                         .require({ js: [ './addons/sizeFormat.js' ] });
-
-                     // label2
-                     _z
-                         .declare('label2')
-                         .require({ js: [ './plugins/label2.jPlugin.js' ] })
-                         .global()
-                         .init(function () {
-                             var MObj = _z( ".moveAble" );
-                             MObj.for(function( i, e ) {
-                                 new label2({ 'element': e });
-                             });
-
-                             return !!MObj.length;
-                         });
-
-                     // wrapWith
-                     _z
-                         .declare('wrapWith', _z.$ )
-                         .require({ js: [ './plugins/wrapWith.jPlugin.js' ] })
-                         .init(function () {
-                             return !!( !!_z( "[wrapWith]" ).length && _z( '[wrapWith]' ).wrapWith() );
-                         });
-
-                     // backtotop
-                     _z
-                         .declare('backtotop')
-                         .require({ js: './plugins/backtotop/backtotop.js' })
-                         .require({ css: './plugins/backtotop/backtotop.css' })
-                         .init(function declarebTTInit() {
-                             var initModule = _z(document).height() > (2 * _z(window).height());
-                             if( initModule && _z.isset(window['backtotop']) && _z.isset(window['backtotop']['onload']) )
-                                 _z.ready(window['backtotop']['onload']);
-
-                             return initModule;
-                         });
-         */
+			// apply plugin
+			_z('.p1t, [inlineEdit]').inlineEdit({
+				blur: false,
+				allowEmpty: true,
+				maxLength: 5,
+				showBtns: false,
+				submit: function(element, newValue) {
+					element.text( newValue );
+				}
+			});
+			
             fns.arg( _z.is_z($), _z.isCore($) );
         });
     </script>
@@ -106,17 +59,7 @@
 <button class="btnUBEvent">Unbind "Change Title" event</button>
 
 <script>
-	_1(function () {
-		_z('.p1t').inlineEdit({
-			blur: false,
-			allowEmpty: true,
-			maxLength: 5,
-			showBtns: false,
-			submit: function(element, newValue) {
-				element.text( newValue );
-			}
-		});
-	});
+
     // bind click event by element id
     _z("#button").click(function () {
         alert("Button clicked!");
@@ -152,7 +95,7 @@
 <button class="btnUBEventt">Unbind "Change Title" event</button>
 
 <p class="p1t">p1 line</p>
-<p class="p2t">p2 line</p>
+<p class="p2t" inlineEdit>p2 line</p>
 <p class="p3t">p3 line</p>
 
 <button id="btn1t">Remove first line hover out</button>
