@@ -20,12 +20,7 @@
     <script type="text/javascript">
         // when document ready
         _z.ready(()=>{
-			// load plugin: inlineEdit
-             _z
-                 .declare('inlineEdit', _z.$)
-                 .require({ js: [ './plugins/inlineEdit.jPlugin.js' ] })
-                 .init(fns.true);
-
+		
             /* // load plugin: toggle blocks by click
              _z
                  .declare('toggleByClick', _z.$)
@@ -106,17 +101,7 @@
 <button class="btnUBEvent">Unbind "Change Title" event</button>
 
 <script>
-	_1(function () {
-		_z('.p1t').inlineEdit({
-			blur: false,
-			allowEmpty: true,
-			maxLength: 5,
-			showBtns: false,
-			submit: function(element, newValue) {
-				element.text( newValue );
-			}
-		});
-	});
+	
     // bind click event by element id
     _z("#button").click(function () {
         alert("Button clicked!");
