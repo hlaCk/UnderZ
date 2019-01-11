@@ -655,7 +655,7 @@ var events = {
             if( !event || !(e=this)) return false;
 
             if( e instanceof EventTarget )
-                return e.dispatchEvent(event);
+                return e.dispatchEvent(event, true);
             else {
                 var _elmentWithNS = events.find( data||{
                                                     element: e,
@@ -673,6 +673,40 @@ var events = {
                 }
             }
             return true;
+        },
+        createEventAnddispatch: function createEventAnddispatch( e, eventName ) {
+            try {
+                // if( hasVar(e, eventName) && _z.isFunction(e[eventName]) )
+                //     e[eventName](event, alias);
+                // else
+                // todo: must try to call element.eventname first
+                //     events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
+
+                var alias = events.getAlias(eventName);
+                var aliasQry =  (alias.length ? "." + alias.join(".") : "");
+                eventName = events.getEventName(eventName);
+
+
+                var _doc = e.ownerDocument ? e.ownerDocument : e;
+                if (e.dispatchEvent) {
+                    var event = _doc.createEvent( ["click", "mousedown", "mouseup"].inArray(eventName)>-1 ? "MouseEvents" : "HTMLEvents" );
+                    event.initEvent(eventName, true, true); // All events created as bubbling and cancelable.
+
+                    event.synthetic = true; // allow detection of synthetic events
+                    // The second parameter says go ahead with the default action
+                    // e.dispatchEvent(event, true);
+                    return events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
+                } else  if (e.fireEvent) {
+                    // IE-old school style, you can drop this if you don't need to support IE8 and lower
+                    var event = _doc.createEventObject();
+                    event.synthetic = true; // allow detection of synthetic events
+                    return e.fireEvent("on" + eventName, event);
+                } else if( e[eventName] && _z.isFunction(e[eventName]) )
+                    return e[eventName]();
+
+            } catch (er) {
+                console.error(er);
+            }
         }
     },
 
@@ -2340,6 +2374,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             arguments = [ elm, attrName, attrValue ];
 
             var attrValueExist = isset(attrValue);
+            // todo: if attrName is null
             attrName = triming.call( attrName );
             isset(attrValue)&&( attrValue = triming.call( attrValue ) );
 
@@ -5619,17 +5654,19 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             var NSalias = _e["alias"];
                             var NSaliasQry =  (NSalias.length ? "." + NSalias.join(".") : "");
 
-                            var event = document.createEvent('HTMLEvents');
-                            event.initEvent(eventName, true, false);
+                            var event = (e.ownerDocument ? e.ownerDocument : e).createEvent('HTMLEvents');
+                            event.initEvent(eventName + NSaliasQry, true, true);
                             try {
-                                // if( hasVar(e, eventName) && _z.isFunction(e[eventName]) )
-                                //     e[eventName](event, alias);
-                                // else
-                                    events.dispatch.apply(e, [event, _e]);
+                                event.synthetic = true;
+                                if( e.dispatchEvent )
+                                    e.dispatchEvent(event);
+                                else
+                                    event = { target: e, type: eventName + NSaliasQry };
+
+                                _e["proxyCallback"].apply(e, [event, _e]);
                             } catch (er) {
                                 console.error(er);
                             }
-                            // e.dispatchEvent(event);
                         });
                         return this;
                     }
@@ -5639,20 +5676,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
 
             elmFunc.elmLoop( elm, function( e ) {
-                var event = document.createEvent('HTMLEvents');
-                event.initEvent(eventName, true, false);
-
-                try {
-                    // if( hasVar(e, eventName) && _z.isFunction(e[eventName]) )
-                    //     e[eventName](event, alias);
-                    // else
-                    // todo: must try to call element.eventname first
-                        events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
-                } catch (er) {
-                    console.error(er);
-                }
-                // e.dispatchEvent(event);
-
+                // todo: must try to call element.eventname first
+                events.createEventAnddispatch(e, eventName + aliasQry);
             }, fns.true);
 
             return this;
