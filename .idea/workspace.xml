@@ -40,8 +40,8 @@
       <file leaf-file-name="_z.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/_z.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="182">
-              <caret line="5668" column="29" selection-start-line="5668" selection-start-column="29" selection-end-line="5668" selection-end-column="29" />
+            <state relative-caret-position="364">
+              <caret line="5678" column="66" selection-start-line="5678" selection-start-column="66" selection-end-line="5678" selection-end-column="66" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#862#1829#0" />
@@ -323,12 +323,12 @@
       <workItem from="1546295405015" duration="33326000" />
       <workItem from="1546617127854" duration="108639000" />
       <workItem from="1546899058478" duration="689000" />
-      <workItem from="1547171566124" duration="28664000" />
+      <workItem from="1547171566124" duration="29774000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="387907000" />
+    <option name="totallyTimeSpent" value="389017000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -1246,8 +1246,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/_z.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="182">
-          <caret line="5668" column="29" selection-start-line="5668" selection-start-column="29" selection-end-line="5668" selection-end-column="29" />
+        <state relative-caret-position="364">
+          <caret line="5678" column="66" selection-start-line="5678" selection-start-column="66" selection-end-line="5678" selection-end-column="66" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#862#1829#0" />
