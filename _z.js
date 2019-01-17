@@ -1,4 +1,4 @@
-// UnderZ 1.0.1 - JavaScript Library
+// UnderZ 1.0.2 - JavaScript Library
 // Copyright © 2008-2019 hlaCk (https://github.com/hlaCk)
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
@@ -49,7 +49,7 @@
 // Array.pushSetter='value' => Array.push( 'value' )
     if(typeof Array.prototype.pushSetter !== 'function')
         Object.defineProperty( Array.prototype, 'pushSetter', { set: function(v) { return this.push(v); }, configurable: false} );
-
+// todo: add in wiki
 // Object.getSize => size of object
     if(typeof Object.prototype.getSize !== 'function')
         Object.prototype.getSize = function( o ) { o = o || this;
@@ -200,6 +200,42 @@
             return target.split(search).join(replacement);
         };
 
+// String String.fromCode(int radix, String seprator, Boolean codeLen)
+    if(typeof String.prototype.fromCode !== 'function')
+        String.prototype.fromCode = function codeToString( radix /*binary=2,octal=8,hex=16,code=undefined*/, separator/*""*/, codeLen/*false*/) {
+            radix = Number(radix) || undefined;
+            separator = separator || "";
+            var cLen = "H".charCodeAt(0).toString(radix).length;
+            codeLen = codeLen || ( codeLen===true ? 2 : Number(codeLen||0)||cLen );
+
+            var hexes = this;
+            if( separator ) hexes.replace(separator, "");
+
+            hexes = hexes.match(new RegExp(".{1," + (codeLen||cLen) + "}", "g")) || [];
+            var back = "";
+            for(var j = 0, hL = hexes.length; j<hL; j++)
+                back += String.fromCharCode(parseInt(hexes[j], radix));
+
+            return back;
+        };
+// todo: wiki+
+// String String.toCode(int radix, String seprator, Boolean codeLen)
+    if(typeof String.prototype.toCode !== 'function')
+        String.prototype.toCode = function stringToCode( radix /*binary=2,octal=8,hex=16,code=undefined*/, separator/*""*/, codeLen/*false*/) {
+            radix = Number(radix) || undefined;
+            separator = separator || "";
+            var cLen = "H".charCodeAt(0).toString(radix).length;
+            codeLen = codeLen|| ( (codeLen===true ? 2 : Number(codeLen||0)||cLen) * (-1) );
+
+            var hex;
+            try { hex = unescape(encodeURIComponent(this)).split('').map((v)=>{
+                    return ("000000"+v.charCodeAt(0).toString(radix)).slice( codeLen || cLen*(-1) );
+                }).join(separator||"");
+            } catch(e) { console.log('Invalid text input: ' + (hex = this)); }
+
+            return hex;
+        };
+
 // RegExp.regexes = Regexes source
     if(typeof RegExp.regexes !== 'object') {
         RegExp.regexes = {
@@ -254,12 +290,24 @@ var
     globaljQuery = window["jQuery"] || new Function("return false"),
 
     // engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
-    version = '1.0.1',
+    version = '1.0.2',
+
+    // set prototype of function and return it - private function
+    setFuncPrototype = function setFunctionPtoyotype(f, p) {
+        var func = f ? f : ()=>{};
+        try {
+            f.prototype = p ? p : ()=>{};
+        } catch (e) { ((f=()=>{}).prototype = {}); }
+        return f;
+    },
+
+    // fix: global Element for workers
+    Element = "Element" in window ? window["Element"] : setFuncPrototype(),
 
     // prototypes of objects - public var in _z.privates.protos
     protos = {
         object: "Object" in window ? Object.prototype : ()=>{},
-        element: "Element" in window ? Element.prototype : ()=>{},
+        element: Element.prototype,
         array: "Array" in window ? Array.prototype : ()=>{},
         likeArray: {
             push: [].push,
@@ -311,9 +359,23 @@ var
     },
 
     // trim prototype - public function in _z.trim( String ) = trimmed String
-    triming = (String.prototype.trim&&String.prototype.trim || function trimString(str) {
-        return (str||this).replace(/^\s+/, '').replace(/\s+$/, '');
-    }),
+    triming = function trimString(str) {
+        return ( str != undefined && str != null ) ? String(str).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '') : "";
+    };
+
+    triming["call"] = (x)=>triming(x);
+
+var
+    // return isset argument
+    getSet = function getSet() {
+        arguments = Array.from(arguments);
+        var valid;
+        if( this == true ) // just skip undefined
+            while( !isset(valid = arguments.shift()) && arguments.length );
+        else
+            while( !!!(valid = arguments.shift()) && arguments.length );
+        return valid;
+    },
 
     // type of `val` as string toLowerCase
     TOV = function typeOfVar( val ) {
@@ -362,7 +424,19 @@ var
     },
 
     // for stop loops
-    stopLoopinException = new Error("stopLoopinException"),
+    loops_Stop = new Error("stopLoopinException"),
+    // "DELETE_VAR".toCode(16)
+    // for delete this in loops
+    loops_delThis = (function () {
+        var ld_e = function deleteThisVar( message ) {
+            var error = new Error( message||'Error' );
+            error.name = 'delThisVar';
+            throw error;
+            return error;
+        };
+        ld_e.prototype = Error.prototype;
+        return ld_e;
+    })(),
 
     // forEach
     foreach = function foreach( obj, cb, context ) {
@@ -377,8 +451,8 @@ var
             return false;
 
         obj = is_z( obj ) ? obj.element() : obj;
-        if( typeof stopLoopinException == "undefined" ) {
-            var stopLoopinException = new Error("stopLoopinException");
+        if( typeof loops_Stop == "undefined" ) {
+            var loops_Stop = new Error("stopLoopinException");
         }
 
         var returns =
@@ -396,14 +470,14 @@ var
                 var cbReturn = cb.apply(context||obj, [ key, obj[ key ], obj]);
 
                 if( !!!cbReturn && cbReturn != undefined )
-                    throw stopLoopinException;
+                    throw loops_Stop;
                 else if( cbReturn != undefined )
                     returns[ key ] = cbReturn;
                 else
                     returns[ key ] = obj[ key ];
             }
         } catch(e) {
-            if(e !== stopLoopinException) throw e;
+            if(e !== loops_Stop) throw e;
         }
 
         return returns;
@@ -411,16 +485,12 @@ var
 
     // toArray
     toArray = function toArray() {
-        var sliced = ( sliced = protos.array.slice.call( arguments.length&&arguments[0] || this ) ).length&&sliced || [];
+        var sliced = ( sliced = protos.array.slice.call( arguments.length&&arguments[0] || this ) ).length&&sliced || false;
 
-        arguments.length &&
-        !sliced.length &&
-        !is_z( arguments[0] ) &&[
-            'number', 'object', 'function'
-        ].includes( typeOfVar(arguments[0]) ) &&
-        ( sliced = [ arguments[0] ] );
+        if( arguments.length && sliced===false && !is_z( arguments[0] ) )
+            try { sliced = [ ...arguments[0] ]; } catch (e) { sliced = [ arguments[0] ]; }
 
-        return sliced;
+        return sliced===false ? [] : sliced;
     },
 
     // subArray
@@ -433,45 +503,35 @@ var
         if( endTo!==false )
             sliceit.push( endTo );
 
-        return toArray( fns.turn( array, this ) ).slice(...sliceit);
+        return toArray( getSet( array, this ) ).slice(...sliceit);
     },
 
     // filterArray
     filterArray = function filterArray( array, callback ) {
-        var ArgLen = arguments.length || 0;
-        var tunning = fns.turny({
-            arg: arguments,
-            self: this,
-            last: undefined
-        });
-        tunning = tunning.call(tunning, 'end');
-        array = tunning[0] || undefined;
-        callback = tunning[1] || undefined;
-        if( isset(tunning[2]) && _z.isFunction(tunning[2]) )
-            callback = tunning[2] || callback;
+        var tunning = fns.argsFix( arguments, this, undefined );
+        arguments = tunning( "arguments" );
+        array = tunning.call();
+        callback = tunning.call();
 
+        var isUZContainer = is_z(this);
         if( isset(callback) && !_z.isFunction(callback) ) {
             var _callback = _z( callback );
             callback = (x)=>_z(x).is( _callback );
         }
 
-        arguments = tunning || [];
-        var filterElements = false;
-        if( _z.isFunction( array ) && !isset(callback) && is_z(this) )
+        if( _z.isFunction( array ) && !isset(callback) && isUZContainer )
             callback = array,
-                array = this.element(),
-                filterElements = true;
+            array = this;
 
-        if( is_z(this) )
-            array = this.element(),
-                filterElements = true;
+        if( isUZContainer )
+            array = this.element();
 
-        if( isset(array) ) array = _z( array ).element();
+        if( !_z.isArray(array) ) array = _z( array ).element();
 
         callback = _z.isFunction(callback)&&callback || function( x ) { return x; };
         var result = protos.array.filter.apply( array, [callback] ) || array;
 
-        if( filterElements && is_z(this) ) {
+        if( isUZContainer && is_z(this) ) {
             var newInstance = this.newSelector( result );
             newInstance.args = [ array ];
             newInstance.selector = "";
@@ -515,9 +575,9 @@ var
             return i > -1;
         };
 
-
     // all registeredEvents
 var events = {
+        lastEvent: version,
         // addEventListener
         register: function eventListenerHandler( data ) {
             if( typeOfVar(data)!=varsType.o || !data['eventName'] || !data['element']) return false;
@@ -654,8 +714,12 @@ var events = {
         dispatch: function dispatchEvent( event, data ) {
             if( !event || !(e=this)) return false;
 
-            if( e instanceof EventTarget )
-                return e.dispatchEvent(event, true);
+            if( e instanceof EventTarget ) {
+                events.lastEvent = undefined;
+                var dE = e.dispatchEvent(event, true);
+                events.lastEvent = version;
+                return dE;
+            }
             else {
                 var _elmentWithNS = events.find( data||{
                                                     element: e,
@@ -667,8 +731,10 @@ var events = {
                     _z.for(_elmentWithNS, function (_Index, _e) {
 
                         var eventName = events.getEventName( _e["eventName"] );
+                        events.lastEvent = undefined;
                         var cb = (_e["proxyCallback"]||_e["realcallback"]||fns.ef);
                         cb['apply']&&cb.apply(_e["element"], [event, _e["alias"]]);
+                        events.lastEvent = version;
                     });
                 }
             }
@@ -686,9 +752,9 @@ var events = {
                 var aliasQry =  (alias.length ? "." + alias.join(".") : "");
                 eventName = events.getEventName(eventName);
 
-
+                events.lastEvent = version;
                 var _doc = e.ownerDocument ? e.ownerDocument : e;
-                if (e.dispatchEvent) {
+                if( e.dispatchEvent && hasVar(_doc, "createEvent") ) {
                     var event = _doc.createEvent( ["click", "mousedown", "mouseup"].inArray(eventName)>-1 ? "MouseEvents" : "HTMLEvents" );
                     event.initEvent(eventName, true, true); // All events created as bubbling and cancelable.
 
@@ -696,20 +762,48 @@ var events = {
                     // The second parameter says go ahead with the default action
                     // e.dispatchEvent(event, true);
                     return events.dispatch.apply(e, [event, { element: e, eventName: eventName, alias: alias }]);
-                } else  if (e.fireEvent) {
+                } else  if( e.fireEvent && hasVar(_doc, "createEventObject") ) {
                     // IE-old school style, you can drop this if you don't need to support IE8 and lower
                     var event = _doc.createEventObject();
                     event.synthetic = true; // allow detection of synthetic events
                     return e.fireEvent("on" + eventName, event);
-                } else if( e[eventName] && _z.isFunction(e[eventName]) )
+                } else if( e[eventName] && _z.isFunction(e[eventName]) ) {
                     return e[eventName]();
+                } else if( e["on" + eventName] && _z.isFunction(e["on" + eventName]) ) {
+                    return e["on" + eventName]();
+                } else {
+                    var _elmentWithNS = events.find( { element: e, eventName: eventName, alias: alias } );
+
+                    if( _z.size(_elmentWithNS) == 0 ) return false;
+                    else {
+                        _z.for(_elmentWithNS, function (_Index, _e) {
+
+                            var eventName = events.getEventName( _e["eventName"] );
+
+                            var event = document.createEvent( ["click", "mousedown", "mouseup"].inArray(eventName)>-1 ? "MouseEvents" : "HTMLEvents" );
+                            event.initEvent(eventName, true, true); // All events created as bubbling and cancelable.
+
+                            event.synthetic = true; // allow detection of synthetic events
+                            // The second parameter says go ahead with the default action
+                            events.lastEvent = undefined;
+                            e.dispatchEvent(event, true);
+                            if( events.lastEvent == undefined ) {
+                                var cb = (_e["proxyCallback"]||_e["realcallback"]||fns.ef);
+                                cb['apply']&&cb.apply(_e["element"], [event, _e["alias"]]);
+                            }
+                            events.lastEvent = undefined;
+                        });
+                        events.lastEvent = version;
+                        return true;
+                    }
+                }
 
             } catch (er) {
                 console.error(er);
             }
         }
     },
-
+// todo: use one function for element matches
     // elements functions
     elmFunc = {
         // Element.matches() polyfill
@@ -726,24 +820,28 @@ var events = {
 
         // Element.matchesAll() polyfill
         matchesAll: function elementMatchesAll( elm, $elm, $not ) {
-            var ArgLen = arguments.length || 0;
-            var tunning = fns.turny({
-                arg: arguments,
-                self: this,
-                last: undefined
-            });
-            tunning = tunning.call(tunning, 'end');
-            elm = tunning[0] || undefined;
-            $elm = tunning[1] || undefined;
-            $not = tunning[2] || false;
+            var tunning = fns.argsFix( arguments, this, undefined );
+            arguments = tunning( "arguments" );
+            elm = tunning.call();
+            $elm = tunning.call();
+            $not = tunning.call() || false;
+
+// todo: tunning issue
+//             todo: this commented lines
+            /*if( arguments.length==2 || _z.isBoolean($elm) )
+                $not = $elm,
+                $elm= elm,
+                elm = this;
 
             if( arguments.length==1 || $elm==undefined )
                 $elm = elm,
-                    elm = this;
-
+                elm = this;
+*/
             var $return = [];
             if( arguments.length )  {
-                $elm = _z( typeOfVar($elm)===varsType.s ? [ $elm ] : $elm );
+                var __sel = typeOfVar($elm)===varsType.s ? [ $elm ] : $elm;
+                var $arguments = arguments;
+                $elm = _z( __sel );
 
                 elmFunc.elmLoop( elm, function( e ) {
                     var _e = e;
@@ -767,8 +865,9 @@ var events = {
 
             if( is_z(this) ) {
                 var newInstance = this.newSelector( $return );
-                newInstance.args = arguments;
-                newInstance.selector = $elm;
+                var eSelector = _z.Array( $return.selector || $return.for((k, e)=>_z.cssSelector(e, 1)) );
+                newInstance.args = eSelector;
+                newInstance.selector = eSelector.toString();
 
                 return newInstance;
             }
@@ -1048,79 +1147,10 @@ var events = {
         },
     },
 
-    // base64 en/decoder
-    base64 = {
-        // encoder polyfill
-        // [https://gist.github.com/999166] by [https://github.com/nignag]
-        btoa: ( window.btoa || ( window.btoa = function (input) {
-            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-                InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
-                str = String(input);
-            for (
-                // initialize result and counter
-                var block, charCode, idx = 0, map = chars, output = '';
-                // if the next str index does not exist:
-                //   change the mapping table to "="
-                //   check if d has no fractional digits
-                str.charAt(idx | 0) || (map = '=', idx % 1);
-                // "8 - idx % 1 * 8" generates the sequence 2, 4, 6, 8
-                output += map.charAt( 63 & block >> 8 - idx % 1 * 8 )
-            )
-            {
-                charCode = str.charCodeAt( idx += 3/4 );
-                if( charCode > 0xFF )
-                    throw new InvalidCharacterError("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
-
-                block = block << 8 | charCode;
-            }
-
-            return output;
-        })).bind(window),
-
-        // decoder polyfill
-        // [https://gist.github.com/1020396] by [https://github.com/atk]
-        atob: ( window.atob || ( window.atob = function (input) {
-            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
-                InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
-                str = String( input ).replace(/[=]+$/, ''); // #31: ExtendScript bad parse of /=
-
-            if( str.length % 4 == 1 )
-                throw new InvalidCharacterError("'atob' failed: The string to be decoded is not correctly encoded.");
-
-            for (
-                // initialize result and counters
-                var bc = 0, bs, buffer, idx = 0, output = '';
-                // get next character
-                buffer = str.charAt( idx++ );
-                // character found in table? initialize bit storage and add its ascii value;
-                ~buffer && ( bs = bc % 4 ? bs * 64 + buffer : buffer,
-                    // and if not first of each 4 characters,
-                    // convert the first 8 bits to one ascii character
-                bc++ % 4 ) ? output += String.fromCharCode( 255 & bs >> (-2 * bc & 6) ) : 0
-            )
-            {
-                // try to find character in table (0-63, not found => -1)
-                buffer = chars.indexOf( buffer );
-            }
-
-            return output;
-        })).bind(window),
-
-        // base64_encode
-        encode: function base64_encode( code ) {
-            return base64.btoa( unescape( encodeURIComponent( code ) ) );
-        },
-
-        // base64_decode
-        decode: function base64_decode( code ) {
-            return decodeURIComponent( escape( base64.atob( code ) ) );
-        },
-    },
-
     // functions ( shortcuts )
     fns = {
         // this for programming test
-        registeredEvents: events,
+        // registeredEvents: events,
         propertyGetter: function( cb, args ) {
             return { get () { return cb( ...(args||[]) ); } };
         },
@@ -1212,7 +1242,9 @@ var events = {
                     'a',
                     'o',
                     's',
-                    'f'
+                    'f',
+                    'n',
+                    'b'
                 ],
 
                 VarsValues = [
@@ -1229,13 +1261,15 @@ var events = {
                     'The hlaCk ..',
                     function() {
                         return arguments;
-                    }
+                    },
+                    1234567890,
+                    true
                 ],
 
                 override = false,
 
                 $return = [],
-
+                $_all = {};
                 tWin = window;
 
             foreach( VarsNames, function( rVar ) {
@@ -1248,9 +1282,12 @@ var events = {
 
                 // add functions
                 tWin[ VarsNames[ rVar ] ] = VarsValues[ rVar ];
+                $_all[ VarsNames[ rVar ] ] = VarsValues[ rVar ];
             } );
 
-            return $return;
+            if( window["hlaCk"] == "Uni" ) window["_iData"] = _iData;
+
+            return (tWin[ 'o' ] = $_all), $return;
         },
 
         // throw functions
@@ -1268,87 +1305,50 @@ var events = {
             generate: function(e) { throw !( e instanceof Error ) ? new Error(e) : e },
         },
 
-        turn: function( c, y ) {
-            if( this == true ) // case sensitive
-                return !isset(c)&&y || c;
-            else
-                return !!!c&&y || c;
-        },
+        // return isset argument
+        getSet: getSet,
 
-        turny: function turny( o ) {
-            if(window['last']==123) console.warn( this, arguments );
+        // fix arguments to set this as first var
+        argsFix: function argumentsFix( _args, _self, _default, coreMethod ) { coreMethod = coreMethod || false;
+            var isABinded;
+            if( !(isABinded = isset( this['ARGS_BINDED'] )) && (!arguments.length || !isset(_args)) ) return;
 
-            if( !isset( this['BINDED'] ) && (!arguments.length || !isset(o['arg'])) ) return;
+            // not binded yet
+            if( !isABinded ) {
+                var def = {
+                    default: _default,
+                    args: _args,
+                    arguments: undefined,
+                    self: _self
+                };
+                def["default"] = isset(def["default"]) ? def["default"] : undefined; // default value
+                def["args"] = _z.Array(def["args"]);
 
-            if( !isset( this['BINDED'] ) ) {
-                o['arg'] = [ ...( o['arg']||[] ) ].reverse();
-                o['arguments'] = [ ...o['arg'] ].reverse();
+                var isSelfUZ = is_z(def["self"]);
 
-                return turny.bind( { BINDED: 1, 'o': o } );
+                if( coreMethod ) { // for _z.METOD
+                    if( !isCore(def["self"]) ) // add this to arguments if its not core
+                        def["args"].unshift( ..._z.Array(def["self"]) );
+                } else if( def["self"] && isSelfUZ ) { // add self to arguments
+                    // no arguments
+                    if( def["args"].length == 0 )
+                        def["args"] = [def["self"]];
+                    else // add self to arguments
+                        if( isSelfUZ && !def["self"].equalsAll(()=>{ return is_z(def["args"][0]) ? def["args"][0] : _z([def["args"][0]]); }) || !isSelfUZ && def["self"] != def["args"][0] ) // add if not exist
+                            def["args"].unshift(def["self"]);
+                }
+
+                var oData = def;
+                oData["arguments"] = _z.Array(oData["args"]);
+                return argumentsFix.bind( { ARGS_BINDED: 1, oData: oData } );
+            } else { // binded and has data
+                if( arguments.length && _args )
+                    return this["oData"][ _args ] || undefined;
+
+                if( this["oData"]["args"].length == 0 ) { // no more arguments to send
+                    return this["oData"]["default"];
+                } else return this["oData"]["args"].shift();
             }
-            else
-            {
-                var anyQuery = [];
-                anyQuery['passed'] = isset( o ) || false;
-                anyQuery['end'] = anyQuery['passed'] && o == 'end' || false;
-                anyQuery['last'] = anyQuery['passed'] && o == 'last' || false;
-                anyQuery['self'] = anyQuery['passed'] && o == 'self' || false;
-                anyQuery['arguments'] = anyQuery['passed'] && (o == 'arguments' && this['o']['arg'] || typeOfVar(o)==varsType.n&&this['o']['arg'][ o ]) || false;
-                anyQuery['isset'] = anyQuery['passed'] && (anyQuery['last'] || anyQuery['self'] || anyQuery['arguments'] || anyQuery['end']) && true || false;
-
-                if( anyQuery['passed'] && !anyQuery['end'] )
-                {
-                    return anyQuery['last']&&this['o']['last'] ||
-                        anyQuery['self']&&this['o']['self'] ||
-                        anyQuery['arguments'] || undefined;
-                }
-
-                if( isset(this['o']['self']) || anyQuery['end'] )
-                {
-                    var selfFnd;
-                    if( !is_z( this['o']['self'] ) )
-                        selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
-                            ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
-                    else
-                    {
-                        selfFnd = this['o']['self'];
-                        this['o']['arguments'].unshift( selfFnd );
-
-                        if( this['o']['arg'].length && selfFnd.equalsAll( this['o']['arg'].slice(-1).pop() ) )
-                            this['o']['arg'].pop() && this['o']['arguments'].shift();
-                    }
-
-                    if( isset(this['o']['self']) ) delete this['o']['self'];
-
-                    if( anyQuery['end'] )
-                        return this['o']['arguments'];
-
-                }
-                else
-                if( isset(this['o']['arg']) ) {
-                    if( !this['o']['arg'].length && isset(this['o']['last']) )
-                    {
-                        var selfFnd = (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) || undefined;
-                        delete this['o']['last'];
-                    }
-                    else
-                    {
-                        var selfFnd = this['o']['arg'].length ? this['o']['arg'].pop() :
-                            ( isset(this['o']['last']) ? (this['o']['last']===true ? this['o']['arguments'] : this['o']['last']) : undefined );
-                    }
-                }
-
-                return selfFnd;
-                return console.warn( this, arguments );
-            }
-
-            return 0;
-        },
-        _zturn: function( c, y ) {
-            return !_z.is_z(c)&&y || c;
-        },
-        _turn: function( c, y ) {
-            return _z.is_z(c)&&y || c;
         },
     },
 
@@ -1390,7 +1390,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             adds.slice(parseInt(adds.length/2))
                         );
                 }
-            }, fns.true);
+            }, trueFunction);
         }
 
         $return = $return.join(', ') || "";
@@ -1459,12 +1459,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
     // is element == window
     isWindow = function isWindow( element ) {
-        var t = _z.privates.type( element );
+        var isW = !!( element != null && element["window"] && element == element.window );
         return element != null &&
             (
-                !!(t['window']) || (
+                !!(isW) || (
                     !!_z.is_z( element ) &&
-                    !!(elmFunc.elmLoop( element, fns.true, isWindow ).length == element.length)
+                    !!(elmFunc.elmLoop( element, trueFunction, isWindow ).length == element.length)
                 )
             );
     },
@@ -1491,7 +1491,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 _newID++;
 
             _zIDData[ 'UnderZ_' + newID + '_' + newStamp + '_' + _newID ] = isEngine ? true : {
-                data: {}
+                data: {},
+                idata: {} // internal
             };
             return 'UnderZ_' + newID + '_' + newStamp + '_' + _newID;
         };
@@ -1748,10 +1749,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     _z.mix = mix;
     // engine id
     _z._counter = 0;
-    // functions guid
-    _z._fguid = 0;
     // internal data
-    _z._data = {};
+    var __data = {};
 
     // register .is[type] functions
     [
@@ -1919,7 +1918,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     console.warn( [arguments[0], $elements, arguments] );
 
                 if( $elements!== false && $elements.length )
-                    $elements = fns.false(arguments[0] = $elements);
+                    $elements = falseFunction(arguments[0] = $elements);
             }
 
             // string selector
@@ -2042,7 +2041,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             try {
                 anElements = _z(anElements).toArray();
             } catch ( err ) { }
-            // console.log(anElements);
+
             ( $anElements=this.element() ).push( ...( typeOfVar( anElements )==varsType.a ? anElements : [anElements] ) );
             return this.newSelector( $anElements );
         },
@@ -2127,6 +2126,76 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         ],
         'skip': true
     });
+
+    // internal data
+    var _iData = {
+        // get/set data for element
+        data: function updateiData( elm, $var, $val ) {
+            var $return=[];
+            $val = getSet.call(true, $val, undefined);
+            var $isVal = _z.isset($val);
+            var newData = (!!$var && !!$isVal) || (!!$var && !!!$isVal && _z.isObject($var));
+            var getData = (!!$var && !!!$isVal) || (!!!$var && !!!$isVal);
+
+            if( elm.length ) {
+                var $this = elm;
+                elm.each(function( i, e ){
+                    // get idata & no idata
+                    if( !isset(e[ version ]) && getData ) {
+                        $return.push( undefined );
+                        return;
+                    }
+
+                    // new data & create object
+                    if( !isset(e[ version ]) )
+                        e[ version ] = new_zID();
+
+                    var crnt_zIDData = new_zID.data[ e[ version ] ];
+
+                    // set data
+                    if( !!$var && !!$isVal && !!e[ version ] ) {
+                        crnt_zIDData['idata'][$var] = $val;
+                        $return.push(e);
+                    }
+                    else if( !!$var && !!!$isVal )
+                        if( !_z.isObject($var) ) // get data
+                            $return.push( getSet.call(true, crnt_zIDData['idata'][$var], undefined ) );
+                        else { // set data
+                            crnt_zIDData['idata'] = crnt_zIDData['idata'] || { data: {}, idata: {} };
+                            crnt_zIDData['idata'] = _z.extend(crnt_zIDData['idata'], $var);
+                        }
+                    else if( !!!$var && !!!$isVal ) // get all data
+                        $return.push(crnt_zIDData['idata']);
+                });
+            }
+
+            return $return;
+        },
+
+        // remove data\s for element
+        remData: function removeiData( elm, $var ) {
+
+            elmFunc.elmLoop( elm, function( e, v ) {
+                if( !isset(e[ version ]) )
+                    return;
+
+                if( !!$var && !!e[ version ] )
+                    delete new_zID.data[ e[ version ] ]['idata'][$var];
+                else if( !!!$var && !!e[ version ] ) {
+                    new_zID.data[ e[ version ] ]['idata'] = {};
+                }
+
+                if( _z.size(new_zID.data[ e[ version ] ]['idata']) == 0 && _z.size(new_zID.data[ e[ version ] ]['data']) == 0 ) {
+                    delete new_zID.data[ e[ version ] ];
+                    delete e[ version ];
+                }
+            }, trueFunction);
+
+            return elm;
+        },
+        removeData: function removeiData( ) { return _iData.remData( ...arguments ); },
+        clearData: function removeiData( ) { return _iData.remData( ...arguments ); },
+    };
 
     // notification module
     _z.notification = function Notifications( options, options2 ) {
@@ -2280,23 +2349,62 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         configurable: false
     });
 
-    // element attributes functions
-    var __zAttrFunctions = {
+    // add method - easy way
+    var join = function attachToUnderZ() {
+        var aData = _z.extend(true, {}, ...arguments);
+
+        var $join = {
+            // add to object
+            "in": function () {
+                var l = arguments.length;
+                for(var li=0; li < l; li++)
+                    _z.extend(true, arguments[ li ], aData);
+
+                return $join;
+            },
+            // add to _z core
+            "core": function () {
+                _z.extend(true, _z, aData);
+                return $join;
+            },
+            // add to _z.$
+            "prop": function () {
+                _z.extend(true, _z.$, aData);
+                return $join;
+            },
+            // add to window
+            "window": function () {
+                var _ks = Object.keys(aData);
+
+                for(var li=0, l = _ks.length; li < l; li++)
+                    window[ _ks[li] ] = aData[ _ks[li] ];
+
+                return $join;
+            },
+            // add prop, value in same object || value
+            "alias": function (obj) {
+                var _ks = Object.keys(obj);
+
+                for(var li=0, l = _ks.length; li < l; li++)
+                    if( typeOfVar(obj[ _ks[li] ]) == varsType.s && isset(aData[ obj[ _ks[li] ] ]) )
+                        aData[ _ks[li] ] = aData[ obj[ _ks[li] ] ];
+                    else
+                        aData[ _ks[li] ] = obj[ _ks[li] ];
+
+                return $join;
+            }
+        };
+
+        return $join;
+    };
+
+    join({
         // check if element has an attribute
         hasAttr: function hasAttr( elm, attrName ) {
-            var tunning = fns.turny({
-                arg: arguments,
-                self: this,
-                last: undefined
-            });
-            elm = tunning.call();
-            attrName = tunning.call();
-            arguments = [ elm, attrName ];
-
-            if( arguments.length === 1 || ( !!!attrName && elm ) ) {
-                attrName = elm;
-                elm = this;
-            }
+            var args = fns.argsFix( arguments, this, undefined );
+            arguments = args( "arguments" );
+            elm = args.call();
+            attrName = args.call();
 
             if( _z.isArray( attrName ) && attrName.length ) {
                 var $return = true;
@@ -2363,20 +2471,16 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // set & get attribute of an element
         attr: function attr( elm, attrName, attrValue ) {
-            var tunning = fns.turny({
-                arg: arguments,
-                self: this,
-                last: undefined
-            });
+            var tunning = fns.argsFix( arguments, this, undefined );
+            arguments = tunning( "arguments" );
             elm = tunning.call();
             attrName = tunning.call();
             attrValue = tunning.call();
-            arguments = [ elm, attrName, attrValue ];
 
             var attrValueExist = isset(attrValue);
             // todo: if attrName is null
             attrName = triming.call( attrName );
-            isset(attrValue)&&( attrValue = triming.call( attrValue ) );
+            isset(attrValue)&&!_z.isFunction(attrValue)&&( attrValue = triming.call( attrValue ) );
 
             if( !!!attrName ) return false;
 
@@ -2387,19 +2491,25 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             if( elm.len || elm.length ) {
                 var $return = [];
                 elmFunc.elmLoop( elm, function( e ) {
+                    var $value = undefined;
+                    if( _z.isFunction(attrValue) ) {
+                        var eValue = e.getAttribute( attrName );
+                        $value = isset( $value = attrValue.call(e, attrName, eValue) ) ? $value : eValue;
+                    } else $value = attrValue;
+
                     if( // checkbox || radio
                         e['tagName'] && toLC(e['tagName'])=='input' &&
                         e['type'] &&
                         ( e['type'] == 'checkbox' || e['type'] == 'radio' ) &&
-                        toLC(attrName) == 'checked' && isset(attrValue)
+                        toLC(attrName) == 'checked' && isset($value)
                     )
-                        e['checked'] = (attrValue!==false && attrValue!==triming.call( false )) ? attrValue='checked' : '';
+                        e['checked'] = ($value!==false && $value!==triming.call( false )) ? $value='checked' : '';
 
-                    if( toLC(attrName) == 'checked' && (attrValue===false || attrValue===triming.call( false )) )
+                    if( toLC(attrName) == 'checked' && ($value===false || $value===triming.call( false )) )
                         e.removeAttribute('checked');
                     else
                         $return.push(
-                            ( isset(attrValue) ? e.setAttribute( attrName, attrValue ) : e.getAttribute( attrName ) )||""
+                            ( isset($value) ? e.setAttribute( attrName, $value ) : e.getAttribute( attrName ) )||""
                         );
                 });
 
@@ -2504,11 +2614,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return obj;
         },
 
-    };
-    __zAttrFunctions.removeAttr = __zAttrFunctions.remAttr;
+    })
+        .alias({ removeAttr: "remAttr" })
+        .prop();
 
-    // elements class functions
-    var __zClassFunctions = {
+    join({
         // check if element has class
         hasClass: function hasClass( elm, className ) {
             if( arguments.length === 1 || ( !!!className && elm ) ) {
@@ -2530,7 +2640,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             className = _z.trim( className );
             if( !!!className ) return false;
 
-            className = ' ' + className + ' ';
+            // className = ' ' + className + ' ';
 
             if( !_z.isDOM( elm ) && !_z.is_z( elm ) && !elm.length )
                 return false;
@@ -2544,7 +2654,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if( $return !== false ) return;
 
                     if( _z.isDOM( this ) )
-                        $return = new RegExp( className ).test(' ' + this.className + ' ');
+                        $return = this.classList.contains( className );// (' ' + this.className + ' ');
+
                 });
 
                 return $return;
@@ -2664,6 +2775,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // toggle class from element
         classList: function classList( elm, unique ) {
+            if( arguments.length == 1 && !_z.isDOM( elm ) && !_z.is_z( elm ) )
+                unique = elm, elm = this;
+
             var elm = elm || this,
                 unique = unique===false ? false : ( unique || true ),
                 $classList = [];
@@ -2679,7 +2793,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         $classList.add( ..._z.toArray( this.classList || []) );
                 });
             }
-            return $classList.unique();
+            return unique && $classList.unique() || $classList;
         },
 
         // css of element
@@ -2701,15 +2815,15 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             // get style
             if( $var&&!!!_z.isObject( $var ) ) {
-                $var = _z.privates.prepareCSS( _z($var) );
+                $var = _z.cssPropName( $var );
+                // $var = _z.privates.prepareCSS( _z($var) );
                 var $return=[];
 
                 elmFunc.elmLoop( elm, function( e ) {
                     if( isset($val) ) {
                         if( e['style'] )
                             e['style'][ $var ] = _z.isFunction( $val ) ? $val.apply( e, arguments ) : $val;
-                    }
-                    else
+                    } else
                         $return.push( ( (compStyle(e, null)||e.currentStyle)[ $var ]||"" ) );
                 });
 
@@ -2732,21 +2846,24 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
 
             var $var = $var || false;
-            var sheets = document.styleSheets, o = [];
-            for( var i in sheets ) {
+            var sheets = doc.styleSheets, o = [];
+            if( sheets.length > 0 )
+            for( var i=0, _sl = sheets.length; i < _sl; i++ ) {
                 var rules = sheets[i].rules || sheets[i].cssRules;
-                for( var r in rules ) {
+                if( rules.length > 0 )
+                for( var r=0, _rl = rules.length; r < _rl; r++ ) {
                     elmFunc.elmLoop( elm, function( e, k ) {
                         o[ k ]||(o[ k ] = {});
-
+                        // console.lopg(k,e);
                         if( elmFunc.matches( e, rules[r].selectorText ) ) {
+                            // console.lopg(rules[r].selectorText,e);
                             var pcss1 = elmFunc.prepareCSS( rules[r].style )||{},
                                 pcss2 = _z(e).attr('style');
                             pcss2 = pcss2 ? (elmFunc.prepareCSS( pcss2 )||{}) : {};
 
                             o[ k ] = _z.extend( o[ k ], pcss2, pcss1 );
                         }
-                    }, fns.true);
+                    }, trueFunction);
                 }
             }
 
@@ -2765,13 +2882,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
 
             return elm.length==1 ? o[0] : o;
-        },
+        }
+    })
+        .alias({ removeClass: "remClass" })
+        .prop();
 
-    };
-    __zClassFunctions.removeClass = __zClassFunctions.remClass;
-
-    // for _z()
-    var __zElementsFunctions = {
+    join({
         // add last selector elements, elm = filter by selector
         addBack: function addBack( elm ) {
             return this.newSelector( this.add( ...(isset( elm ) ? this.end().whereIs( elm ) : this.end()).element() ) );
@@ -2823,7 +2939,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // show element
         show: function show( elm, displayStyle ) {
-            var displayStyle = fns.turn( displayStyle, (is_z(elm) ? false : elm) );
+            var displayStyle = getSet( displayStyle, (is_z(elm) ? false : elm) );
             var elm = (is_z(elm) ? elm : this) || false;
 
             if( !_z.isDOM( elm ) && !elm.len && !elm.length ) return false;
@@ -2840,7 +2956,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // toggle show/hide
         toggle: function toggle( elm, displayStyle ) {
-            var displayStyle = fns.turn( displayStyle, (is_z(elm) ? 'toggle' : elm) || 'toggle' );
+            var displayStyle = getSet( displayStyle, (is_z(elm) ? 'toggle' : elm) || 'toggle' );
             var elm = (is_z(elm) ? elm : this) || false;
 
             if( !_z.isDOM( elm ) && !elm.len && !elm.length ) return this;
@@ -2991,25 +3107,20 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             return this;
         },
-    };
+    })
+        .prop();
 
-    // for _z
-    var __zGlobalFunctions = [ {
-        // scroll To element
-        scrollTo: __zElementsFunctions.scrollTo,
+    join({
 
         // String.trim
         trim: function trimString( str ) {
-            var tunning = fns.turny({
-                arg: arguments,
-                self: this,
-                last: undefined
-            });
+            var tunning = fns.argsFix( arguments, this, undefined, true );
+            arguments = tunning( "arguments" );
             str = tunning.call();
 
             if( !isset(str) ) return "";
 
-            if( str && !!!str['underZ'] ) str = _z(str);
+            if( str && !!!is_z(str) ) str = _z(str);
 
             if( !str.selector && !str.len ) return "";
 
@@ -3077,7 +3188,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                         callback: function(e) { return _z.isNumber(e); }, // function for each callback
 
                         // assign or all elements is valid
-                        valid: fns.true, // function to filter elements before looping
+                        valid: trueFunction, // function to filter elements before looping
 
                         // assign or return all results
                         result: function( r, ra ) { return !!(ra.length&&r.filter((v)=>v).length===ra.length); } // function for fillter results
@@ -3117,6 +3228,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
+        cssPropName: function cssPropNameFix( prop, toJS ) { toJS = toJS || false;
+            if( toJS )
+                return prop.replace(/([A-Z])/g, "-$1").toLowerCase();
+
+            return prop.replace( /^-ms-/, "ms-" ).replace( /-([\da-z])/gi, ( all, fst)=>fst.toUpperCase() ) || "";
+            // return prop.replace(/-([a-z])/g, function( str, letter ) { return letter.toUpperCase(); } );
+        },
+
         // get current active dom element as _z()
         activeElment: function activeElement() {
             try { return _z( document.activeElement ); } catch ( err ) { return _z(); }
@@ -3125,7 +3244,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     }, {
         // effect status, true = enabled, false = disabled
         eff: true,
-    }, {
+
         // extends objects only
         extendObjects: extendObjFunction,
 
@@ -3137,7 +3256,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // bind function
         proxy: function proxy( fn, fn2 ) {
             if ( arguments.length > 1 && _z.isString(fn2) && isset(fn[ fn2 ]) ) {
-                _fn = fn[ fn2 ];
+                var _fn = fn[ fn2 ];
                 fn2 = fn;
                 fn = _fn;
             }
@@ -3149,7 +3268,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             function newProxy() {
                 return fn.apply( fn2 || $this, args.concat( protos.array.slice.call( arguments ) ) );
             }
-            newProxy.guid = fn.guid = fn.guid || _z._fguid++;
+
+            // functions guid
+            proxy["_fguid"] = proxy["_fguid"] || 0;
+
+            newProxy.guid = fn.guid = fn.guid || proxy._fguid++;
 
             return newProxy;
         },
@@ -3187,10 +3310,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return resp;
         },
 
-    }].mix;
+    })
+        .alias({
+            // scroll To element
+            scrollTo: _z.$.scrollTo,
+        })
+        .core();
 
-    // shared, functions in _z & _z()
-    var __zFunctions = {
+    join({
         // object.hasOwnProperty
         hasProp: hasProp,
 
@@ -3282,7 +3409,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 *		callback: function(e) { return _z.isNumber(e); }, // function for each callback
 *
 *		// assign or all elements is valid
-*		valid: fns.true, // function to filter elements before looping
+*		valid: trueFunction, // function to filter elements before looping
 *
 *		// assign or return all results
 *		result: function(r,ra) { return ra.length?r[0]:false; } // function for fillter results
@@ -3297,7 +3424,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             elm = _z( elm );
 
             op['result'] = fns.isSetisFunc(op['result'])&&op['result'] || function(c) { return c; };
-            op['valid'] = fns.isSetisFunc(op['valid'])&&op['valid'] || fns.true;
+            op['valid'] = fns.isSetisFunc(op['valid'])&&op['valid'] || trueFunction;
 
             var result = [false];
             if( _z.is_z(elm) )
@@ -3341,6 +3468,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // array map
         map: function map( array, func ) {
+            // _z.map["delete_var"] = var cc=0;
+            // d=_z.toArray("DELETE_VAR").map(x=>{ cc += x.charCodeAt(0); return x.charCodeAt(0); })
             if( _z.isFunction( array ) && !!!func ) {
                 func = array;
                 array = this['element']&&this.element() || [];
@@ -3353,16 +3482,54 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 throw new TypeError('Second argument IS NOT a Function!');
 
             var l = array.length;
-            var result = [], i = 0;
+            var rmIndex = [], i = 0;
             for( ; i < l ; i++ ) {
-                result.push( func.apply( array[i], [array[i], i, array] ) );
+                try {
+                    var res = loops_Stop;
+                    res = func.apply( array[i], [array[i], i, array] );
+                } catch (e) {
+                    if( e instanceof loops_delThis )
+                        rmIndex.push(i);
+                }
+                if( res != loops_Stop )
+                    array[i] = res;
             }
-            return array = null, result;
+
+            if( rmIndex.length )
+                _z.for(rmIndex, (i, v)=>{ array.remove(v-i); });
+
+            return array;
         },
-    };
+
+        getTransitionEventName: function getTransitionEventName( getCSSProp ) { getCSSProp = getCSSProp || false;
+            var el = is_z(this)&&this.length ? this[0] : _z("body");
+            el = (el.length ? el : [ doc["createElement"]&&doc.createElement("atestElement") ])[0];
+
+            if( !el ) return "";
+
+            var transitions = {
+                "transition"      : "transitionend",
+                "OTransition"     : "oTransitionEnd",
+                "MozTransition"   : "transitionend",
+                "WebkitTransition": "webkitTransitionEnd"
+            };
+            var _style = (compStyle(el, null)||el.currentStyle) || el.style;
+
+            var _keys = Object.keys( transitions );
+            for( var i = 0, l = _keys.length; i < l ; i++ ) { var key = _keys[i];
+                if( isset(_style[ key ]) )
+                    return getCSSProp ? key : transitions[ key ];
+            }
+
+            return "";
+        },
+
+    })
+        .core()
+        .prop();
 
     // serialize data options
-    var __zSerializeSettings = {
+    join({
         // global serialize settings
         serializeSetting: {
             // do not serialize these
@@ -3378,10 +3545,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             ],
         },
 
-    };
+    })
+        .core();
 
     // serialize data
-    var __zSerialize = {
+    join({
         // serialize array
         serializeArray: function serializeArray( elm ) {
             var field, length, $return = [];
@@ -3444,7 +3612,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return $return.join("&").replace(/%20/g, "+");
         },
 
-    };
+    })
+        .prop();
 
     // timer
     var interval = function interval() {
@@ -3502,7 +3671,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 // assign time
         stamp: 0,
 // timer callback
-        callback: fns.false,
+        callback: falseFunction,
 
         constructor: interval,
 
@@ -3511,13 +3680,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             // run once
             if( this.stamp !== 0 ) return false;
 
-            fn = fn || fns.false;
+            fn = fn || falseFunction;
             iv = iv || interval.interval;
 
             // register timer interval
             this.interval = ( _z.isNumber(fn) && fn ) || ( _z.isNumber(iv) && iv ) || interval.interval;
             // register timer callback
-            this.callback = ( _z.isFunction(iv) && iv ) || ( _z.isFunction(fn) && fn ) || fns.false;
+            this.callback = ( _z.isFunction(iv) && iv ) || ( _z.isFunction(fn) && fn ) || falseFunction;
 
             // register timer created time
             this.stamp = fns.time();
@@ -3549,7 +3718,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             this.executionCount++;
             // execute function
-            return this.callback.call();
+            return this.callback.call(this);
         },
 
 // check if this timer can start
@@ -3565,6 +3734,28 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 ((this.isOnce === true && this.executionCount < 1) || this.isOnce === false) );
         },
 
+// set interval timer - must restart the timer
+// s = new interval
+// run = run timer after interval set ? true||false
+        setInterval: function setInterval( s, run/*undefined*/ ) {
+            s = _z.toNum(s);
+            run = run || undefined;
+            var restart = false;
+
+            // is it already running ? stop
+            if( restart = (this.isRunning !== false) )
+                this.stop();
+
+            // change interval
+            this.interval = s;
+
+            // was it running ? run it
+            if( restart || run !== false )
+                this.start(true);
+
+            return this;
+        },
+
 // start timer once
         once: function once(status) {
             status = arguments.length ? !!status : null;
@@ -3577,13 +3768,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
 // start timer
-        start: function start() {
+        start: function start( froce ) { froce = froce || false;
             if( this.stamp === undefined ) return false;
 
             // is it already running ?
             if( this.isRunning === false ) {
                 // if its timer once
-                if( this.isOnce === true && this.executionCount > 0 ) return this;
+                if( this.isOnce === true && (this.executionCount > 0 && froce === false ) ) return this;
 
                 // create interval & register id & change status
                 this.isRunning = !!(this.id = setInterval(this.execFunction.bind(this), this.interval));
@@ -3634,12 +3825,14 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
     interval.timer.init.prototype = interval.timer;
 
     // timer system
-    var __zWindowAddons = {
+    join({
         timer: interval
-    };
+    })
+        .core()
+        .window();
 
     // declare module system
-    var __zDeclare = {
+    join({
         // defaultValues
         dec_Default: {
             // moduleName
@@ -3718,9 +3911,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                 // check if load request sent
                 if( this.loaded && this.loaded === true )
-                    this.init(fns.true);
+                    this.init(trueFunction);
 
-                // console.log('method1', this);
                 return this;
             },
 
@@ -3795,7 +3987,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // declare new module
         declare: function declare( module, obj ) {
             var hook = {
-                obj: fns.turn( obj, this ),
+                obj: getSet( obj, this ),
                 module: module,
             };
             var newDeclare = _z.extend({}, _z.dec_Default);
@@ -3804,10 +3996,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 newDeclare.requires = [];
 
             if( !_z.isFunction(newDeclare.initFunction) )
-                newDeclare.initFunction = window.fns.true;
+                newDeclare.initFunction = trueFunction;
 
             if( !_z.isFunction(newDeclare.whenRequest) )
-                newDeclare.whenRequest = window.fns.true;
+                newDeclare.whenRequest = trueFunction;
 
             if( !!!module ) return newDeclare;
 
@@ -3853,7 +4045,8 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             return this;
         },
-    };
+    })
+        .core();
 
     // ajax system
     var ajax = function ajax(){
@@ -3974,7 +4167,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             this.aguid = ++ajax.config.id;
             this['xhrFuncs'][ this.aguid ] = [];
 
-            var param = this.param = _z.extend({ xhr: false }, __zAjax.ajaxSettings, options || {} ),
+            var param = this.param = _z.extend({ xhr: false }, _z.ajaxSettings, options || {} ),
                 $this = this,
                 xhr = {},
                 xhrFuncs = this['xhrFuncs'][ this.aguid ],
@@ -4295,8 +4488,63 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
     };
 
+    // ajax & url tools
+    join({
+            // hash from url
+            hash: function getHash( setHash ) {
+                if( _z.isset( setHash ) )
+                    window.location.hash = _z.trim( setHash );
 
-    var __zAjax = {
+                var hash = window.location.hash || "";
+                return hash.substr( 1 );
+            },
+
+            // object to url query
+            param: function param( object, perfix, parts ) {
+                var parts = parts || [],
+                    perfix = perfix || false,
+                    add = function( n, v ) {
+                        parts.push(
+                            encodeURIComponent( n ) + "=" +
+                            encodeURIComponent( _z.isFunction( v ) ? v() : (v == null && "" || v) )
+                        );
+                    };
+
+                // append
+                if( perfix ) {
+                    // array
+                    if( typeOfVar( object ) === varsType.a ) {
+                        for( i = 0, len = object.length; i < len; i++ )
+                            if ( /\[\]$/.test( perfix ) )
+                                add( perfix, object[i] );
+                            else
+                                param( object[i], perfix + '[' + ( typeOfVar( object[i] ) === varsType.o ? i : '' ) + ']', parts );
+                    }
+                    // object
+                    else if( typeOfVar( object ) === varsType.o ) {
+                        for( var prop in object )
+                            param( object[ prop ], perfix + '[' + prop + ']', parts );
+                    }
+                    // string
+                    else add( perfix, object );
+                }
+                else if( typeOfVar( object ) === varsType.a ) {
+                    // elements
+                    elmFunc.elmLoop( object, function( e, v ) {
+                        if( e.name )
+                            add( e.name, e.value );
+                    }, trueFunction);
+                }
+                // init
+                else {
+                    for( var prop in object )
+                        param( object[ prop ], prop, parts );
+                }
+
+                return parts.join( '&' ).replace( /%20/g, '+' );
+            },
+
+        }, {
         // normal ajax
         ajax: ajax,
 
@@ -4496,25 +4744,84 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             _z.ajaxSettings = _z.extend(true, _z.ajaxSettings, opt);
             return _z.ajaxSettings;
         }
+    })
+        .core();
+
+    // var __zAjax = ;
+
+    // queue by element
+    var queue = function queue(elm, func, doNotRun) { doNotRun = doNotRun || false;
+        var e = is_z(elm) ? elm[0] : elm;
+
+        var qI;
+        func = func instanceof _z.timer ? func : func;
+
+        if( (qI = queue.qElm.inArray(e)) === -1 ) {
+            qI = queue.qElm.push( e ) -1;
+        }
+
+        queue.q[ qI ] = queue.q[ qI ] || [];
+        queue.q[ qI ].push(func);
+
+        // queue length
+        var qLength = ()=>_z.queue.q.filter((fqi, fqa)=>{
+            // var x2Times = 0;
+            // temp1.each((x1,x2)=>_z.isset(x2)||++x2Times)
+            // temp1.getSize() == x2Times
+
+            var rr = fqi.filter((_fqi, _fqa)=>{
+                if( !isset(_fqi.stamp) ) return false;
+
+                return !(_fqi.executionCount > 0&&!_fqi.isRunning&&!_fqi.isReady());
+            });
+            // console.log(rr);
+            return _z.size(rr)>0;
+        } ).length;
+
+        // queue handler
+        if( !isset(queue.qT) ) {
+            queue.qT = (new _z.timer(function runQueue() {
+                _z.for(queue.qElm, function (qei, qe) {
+                    if (isset(queue.q[qei]) && _z.isArray(queue.q[qei]) && queue.q[qei].length > 0) {
+                        if( !isset(queue.q[qei][0].stamp) ||
+                            (queue.q[qei][0].executionCount > 0 && !queue.q[qei][0].isRunning && !queue.q[qei][0].isReady()) ||
+                            (queue.q[qei][0].isReady() && queue.q[qei][0].executionCount != 0)
+                        ) queue.q[qei].shift();
+
+                        if( isset(queue.q[qei][0]) )
+                            queue.q[qei][0].isReady() && queue.q[qei][0].start();
+                    }
+                });
+
+                if( qLength() == 0 ) {
+                    queue.q = [];
+                    queue.qElm = [];
+                    queue.qT.stop();
+                }
+            }, 100));
+        }
+
+        // run queue handler
+        if( qLength() > 0 && queue.qT.isReady() && doNotRun === false )
+            queue.qT.start();
+
+        return queue.qT;
     };
+    queue.q = [];
+    queue.qElm = [];
+    queue.qT = undefined;
 
-// _z.$ {
+    join({
+        queue: queue
+    })
+        .core();
 
-    // elements function
-    [ _z.$, __zElementsFunctions, __zClassFunctions, __zAttrFunctions ].mix;
-
-    // add sheared functions to _z.$
-    [ _z.$, __zFunctions ].mix;
-
-    // add serialize functions to _z.$
-    [ _z.$, __zSerialize ].mix;
-
-    // elements function
-    [ _z.$, {
+     // DOM functions
+    join({
         // is this element/elements = HTMLDOM
         isDOMElement: function isDOMElement( orIsWindow ) { orIsWindow = orIsWindow || false;
             if( this.element().length ) {
-                return !!( elmFunc.elmLoop( this, fns.true, orIsWindow ? _z.isDOMOW : _z.isDOM ).length == this.length );
+                return !!( elmFunc.elmLoop( this, trueFunction, orIsWindow ? _z.isDOMOW : _z.isDOM ).length == this.length );
             } else return false;
         },
 
@@ -4611,7 +4918,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             if( isset(val) )
                 val = _z.map( _z.isArray( val ) ? val : [val], function(){
-                    return triming.apply(this, arguments);
+                    return triming.call(this);
                 } ).filter( k => !!k );
 
             elm = this;
@@ -4735,7 +5042,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // element/s tagName
         tagName: function tagName( filter ) {
-            filter = filter || fns.true;
+            filter = filter || trueFunction;
             var elm = elm || this;
             elm = (_z.isDOM(elm)||_z.isArray(elm)) ? _z( elm ) : (
                 _z.is_z(elm) ? elm : ( _z.isArray(elm) ? elm : false )
@@ -4817,6 +5124,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                 $val.for( function( key, value ) {
                     if( _z.isDOM( value ) || _z.type( value )=='Text' ) {
+
                         e['appendChild']( value );
 
                         if( _z(value).tagName() == "script" ) {
@@ -4947,7 +5255,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             if( this.length > 1 ) {
                 var elm = this,
-                $return=[];
+                    $return=[];
 
                 elmFunc.elmLoop( elm, function( e ) {
                     if( ret==true && _z(e).isShow() )
@@ -5009,16 +5317,278 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return elmFunc.fade.apply( this, [ 'To', speed, opacity, callback ] );
         },
 
-        // todo:animate element
-        animate: function animate( params, speed ) {
-            elm = this;
-            elmFunc.elmLoop( elm, function( e ) {
-                e.style.transition = 'all ' + speed;
-                Object.keys( params ).forEach( (key) => {
-                    e.style[ key ] = params[ key ];
+        // change element/s opacity
+        opacity: function elementOpacity( options ) {
+            // get opacity controller
+            if( arguments.length == 0 ) {
+                var opt = {
+                    // cancel this and undo changes
+                    cancel: ()=> {
+                        var d = opt.getAll();
+                        if( d.length == 0 ) return this;
+
+                        _z.for(d, function (k, data) {
+                            data["cancel"]&&data.cancel();
+                        });
+                        return this;
+                    },
+                    // finish changes immediately
+                    finish: ()=>{
+                        var d = opt.getAll();
+                        if( d.length == 0 ) return this;
+
+                        _z.for(d, function (k, data) {
+                            data["finish"]&&data.finish();
+                        });
+                        return this;
+                    },
+
+                    getAll: ()=>{
+                        var dID = _z.map( (_iData.data(this, "OpacityData")[0] || []), function(_OData) {
+                            return _OData.isFinish() ? false : _OData;
+                        }).filter(x=>x);
+
+                        return dID || {};
+                    }
+                };
+
+                return opt;
+            }
+
+            if( is_z(options) || !_z.isObject(options) || options.getSize() < 1 )
+                options = {};
+
+            var elm = options["elm"] = getSet(options["elm"], this); // elements to change opacity
+            if( elm && !is_z(elm) )
+                elm = options["elm"] = _z(elm);
+
+            var speed = options["speed"] = getSet(options["speed"], options["duration"], 0); // change speed
+            var type = options["type"] = getSet(options["type"], "ease"); // change type
+            var delay = options["delay"] = getSet(options["delay"], 0); // deley before change
+            var whenDone = options["done"] = getSet(options["done"], options["complete"], false); // function to call after finish
+            var opacity = options["opacity"] = getSet(options["opacity"], 0); // opacity value
+
+            // multi element
+            if( _z.size(elm) > 1 ) {
+                // elements loop
+                elmFunc.elmLoop( elm, function( e, eIndex ) {
+                    _z.queue(e, (new _z.timer(function() {
+                        elementOpacity( _z.extend({}, options, { elm: _z(e) }) );
+                    }, 2 )).once(true));
                 });
+
+                return this;
+            }
+
+            // busy
+            if( getSet( _iData.data(elm, "OpacityRunning")[0], false ) === true ) {
+                (new _z.timer(function() {
+                    // not finish
+                    if( getSet( _iData.data(elm, "OpacityRunning")[0], false ) === true )
+                        return this.setInterval(16, true);
+
+                    this.remove();
+                    elementOpacity( options );
+                }, 16 )).once(true).start();
+
+                return this;
+            }
+
+            var oldOpacity; // save old opacity for cancellation
+            var _timers = [], // checker ro remove css transition
+                oTypes = ["ease", "ease-in", "ease-out", "ease-in-out", "linear"], // transition type
+                oProps = _z.eff === false ? [] : ["-webkit-transition", "-moz-transition", "-ms-transition", "-o-transition", "transition"];
+
+            // check type
+            type = _z.cssPropName(type, true);
+            type = options["type"] = oTypes.includes(type) ? type : oTypes[0];
+
+            opacity = _z.toNum(opacity);
+            opacity = (opacity >= 0 || opacity <= 1) ? opacity : (opacity < 0 ? 0 : 1);
+
+            delay = _z.toNum(delay)==0 ? "" : " " + Number((delay / 1000).toFixed(2)) + "s";
+
+            // elements loop
+            elmFunc.elmLoop( elm, function( e, eIndex ) {
+                // register as inproggress
+                _iData.data( _z(e), "OpacityRunning", true );
+
+                var newCSS = { opacity: opacity };
+
+                // apply css transition
+                if( speed ) {
+                    var applyOpacityTrans = {},
+                        oldOpacityTrans = {};
+
+                    _z.for(oProps, function (oPK, oPV) {
+                        var cssPN = _z.cssPropName(oPV, true);
+                        applyOpacityTrans[ cssPN ] = "opacity " + Number((speed / 1000).toFixed(2)) + "s " + (type || "ease") + delay;
+                        oldOpacityTrans[ cssPN ] = _z(e).css( cssPN );
+                    });
+
+                    _z(e).css( applyOpacityTrans );
+                }
+
+                oldOpacity = _z.toNum(_z(e).css( "opacity" ));
+                _z(e).css( newCSS );
+
+                if( speed ) {
+                    // checker
+                    _timers[ eIndex ] = { status: true, timer: null };
+                    _timers[ eIndex ]["timer"] = (new _z.timer(function() {
+                        // not finish
+                        if( _z.toNum( _z(e).css( "opacity" ) ) != opacity && _timers[ eIndex ]["status"] == true )
+                            return this.setInterval(16, true);
+
+                        // assign old css
+                        if( _timers[ eIndex ]["status"] != "ended" )
+                            _z(e).css( oldOpacityTrans );
+
+                        // on cancel
+                        if( _timers[ eIndex ]["status"] == false ) {
+                            _z(e).css( "opacity", oldOpacity );
+                        } else {
+                            // on end
+                            if( _timers[ eIndex ]["status"] == "end" ) {
+                                _timers[ eIndex ]["status"] = "ended";
+                                _z(e).css( "opacity", (opacity + 0.11) >= 1 ? (opacity - 0.11) : (opacity + 0.11) );
+                                return this.setInterval(16, true);
+                            }
+
+                            // when finish
+                            // _z(e).css( "opacity", newCSS["opacity"] );
+                            _z(e).css( newCSS );
+                            if( _z.isFunction(whenDone) )
+                                whenDone.call(e, _z.toNum( _z(e).css( "opacity" ) ));
+                        }
+                        this.remove();
+
+                        // register as finished
+                        _timers[ eIndex ]["status"] = "ended";
+                        _iData.data( _z(e), "OpacityRunning", false );
+
+                    }, 2 )).once(true).start();
+                } else {
+                    // register as finished
+                    _iData.data( _z(e), "OpacityRunning", false );
+                    if( _z.isFunction(whenDone) )
+                        whenDone.call(e, opacity);
+                }
             });
 
+            var returns = {
+                // cancel this and undo changes
+                cancel: ()=>{
+                    if( returns['s'] ) return elm;
+                    _timers.length&&_z.for(_timers, function (_tI, _tT) {
+                        _timers[_tI]["status"] = false;
+                        _timers[_tI]["timer"].stop().execFunction( true );
+                    });
+                    returns['s'] = true;
+
+                    return elm;
+                },
+
+                // finish changes immediately
+                finish: ()=>{
+                    if( returns['s'] ) return elm;
+                    _timers.length&&_z.for(_timers, function (_tI, _tT) {
+                        _timers[_tI]["status"] = "end";
+                        _timers[_tI]["timer"].stop().execFunction( true );
+                    });
+                    returns['s'] = true;
+
+                    return elm;
+                },
+
+                // check status
+                isFinish: ()=>{ return _timers.filter(x=>_z.isset(x["timer"].stamp)).length == 0; },
+                element: elm
+            };
+
+            // elements loop
+            elmFunc.elmLoop( elm, function( e, eIndex ) {
+                var oldOData = _iData.data(_z(e), "OpacityData")[0] || [];
+                oldOData = _z.size( oldOData ) == 0 ? [] : oldOData;
+                _iData.data(_z(e), "OpacityData", oldOData.push(returns)&&oldOData );
+            });
+
+            return this;
+        },
+
+        // todo:animate element
+        animate: function animate( params, speed, options ) {
+            var elm = this;
+            speed = _z.isNumber(speed) ? speed : _z.trim((speed||"normal")).toLocaleLowerCase();
+            speed = !_z.isNumber(speed) ? (speed == "slow" ? 800 : (speed == "fast" ? 200 : 500)) : speed;
+
+            var _speed = " " + Number((speed / 1000).toFixed(2)) + "s";
+
+            var transition = {};
+            var oldTransition = {};
+            var transition2 = {};
+
+            // test
+            function pxToEm (px, element) {
+                element = element === null || element === undefined ? doc.documentElement : element;
+                var temporaryElement = doc.createElement('div');
+                temporaryElement.style.setProperty('position', 'absolute', 'important');
+                temporaryElement.style.setProperty('visibility', 'hidden', 'important');
+                temporaryElement.style.setProperty('font-size', '1em', 'important');
+                element.appendChild(temporaryElement);
+                var baseFontSize = parseFloat(getComputedStyle(temporaryElement).fontSize);
+                temporaryElement.parentNode.removeChild(temporaryElement);
+                return px / baseFontSize;
+            }
+
+            Object.keys( params ).forEach( (key) => {
+                var cssPN = _z.cssPropName(key, true);
+                var cssVal;
+                transition2[ cssPN ] = params[ key ];
+
+                var _MathType = transition2[ cssPN ].indexOf("+=")!=-1 ? "+" : ( transition2[ cssPN ].indexOf("-=")!=-1 ? "-" : false );
+
+                if( _MathType !== false ) {
+                    var v_ = transition2[ cssPN ].replaceArray([ "+=", "-=" ], "");
+                    var valIPx = _z.trim(v_.match(/\d+/g).map(Number)[0] || 0);
+                    var OvalIPx = (compStyle( _z(elm)[0] )[cssPN] || _z(elm).css( cssPN ) || "0px");
+                    var OUnit  = _z.trim(OvalIPx.match(/\d+/g).map(Number)[0]);
+                    OUnit = OvalIPx.replace(OUnit, "") || "px";
+                    OvalIPx = OvalIPx.match(/\d+/g).map(Number)[0] || 0;
+                    transition2[ cssPN ] = "" + (_MathType=="+" ? (Number(OvalIPx) + Number(valIPx)) : (Number(OvalIPx) - Number(valIPx))) + "px";
+                }
+
+                if( cssVal = _z(elm).css( cssPN ) )
+                    _z(elm).css( cssPN,  cssVal );
+            });
+
+            // var _trans = Object.keys( transition2 ).join(_speed+" linear,") + _speed + " linear";
+            var _trans = "all" + _speed + " linear";
+
+            if( _z.eff !== false ) {
+                _z.for(["-webkit-transition", "-moz-transition", "-ms-transition", "-o-transition", "transition"], function (oPK, oPV) {
+                    var cssPN = _z.cssPropName(oPV, true);
+                    oldTransition[ cssPN] = _z(elm).css( cssPN );
+                    transition[ cssPN ] = _trans;
+                });
+                _z(elm).css( transition );
+            }
+            // console.log(transition2, transition, oldTransition);
+            // start
+            setTimeout(()=>_z(elm).css(transition2), 1);
+
+
+            // when finish
+            _z(elm).once(_z.getTransitionEventName(0), function() {
+                var _keys = Object.keys( transition2 );
+                for( var i = 0, l = _keys.length; i < l ; i++ ) {
+                    var key = _keys[i];
+                    if( transition2[ key ] != _z(elm).css( key ) )
+                        return false;
+                }
+
+                setTimeout(()=>_z(elm).css(oldTransition), 1);
+            });
             return this;
         },
 
@@ -5211,12 +5781,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             // case selector || cb
             if( arguments.length==1 && !!selector ) {
-                cb = _z.isFunction( selector ) ? selector : fns.true;
+                cb = _z.isFunction( selector ) ? selector : trueFunction;
                 selector = !_z.isFunction( selector ) ? selector : "";
             } // case cb && selector
             else if( arguments.length==2 && !!selector && !!cb ) {
                 cb = _z.isFunction( selector ) ? selector : (
-                    _z.isFunction( cb ) ? cb : fns.true );
+                    _z.isFunction( cb ) ? cb : trueFunction );
                 selector = !_z.isFunction( selector ) ? selector : (
                     !_z.isFunction( cb ) ? cb : "" );
             }
@@ -5534,7 +6104,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var elm = this,
                 selector = selector || "",
                 $return = [],
-                filter = filter || fns.true;
+                filter = filter || trueFunction;
 
             elmFunc.elmLoop( elm, function( e ) {
                 if( e && e["parentElement"] ) {
@@ -5658,16 +6228,21 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             event.initEvent(eventName + NSaliasQry, true, true);
                             try {
                                 event.synthetic = true;
+                                events.lastEvent = undefined;
                                 if( e.dispatchEvent )
                                     e.dispatchEvent(event);
                                 else
                                     event = { target: e, type: eventName + NSaliasQry };
 
-                                _e["proxyCallback"].apply(e, [event, _e]);
+                                if( events.lastEvent == undefined ) {
+                                    _e["proxyCallback"].apply(e, [event, _e]);
+                                }
+                                events.lastEvent = undefined;
                             } catch (er) {
                                 console.error(er);
                             }
                         });
+                        events.lastEvent = version;
                         return this;
                     }
                 });
@@ -5676,9 +6251,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
 
             elmFunc.elmLoop( elm, function( e ) {
-                // todo: must try to call element.eventname first 
+                // todo: must try to call element.eventname first
                 events.createEventAnddispatch(e, eventName + aliasQry);
-            }, fns.true);
+            }, trueFunction);
 
             return this;
         },
@@ -5746,6 +6321,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 if( !elms ) return this;
 
                 var proxyCallback = function proxyCallback( event ) {
+                    if( events.lastEvent && events.lastEvent != version ) return;
+
+                    if( events.lastEvent != version ) console.info("Event: ", events.lastEvent);
+
+                    events.lastEvent = events.lastEvent==version ? version : event;
                     var eventName = events.getEventName(event.type);
                     if( qselector && event && event.target && _z(event.target).parents(qselector).addBack(qselector).length || !qselector )
                         return callback.call(event.target, event);
@@ -5759,7 +6339,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     proxyCallback: proxyCallback,
                     realcallback: callback
                 } );
-            }, fns.true);
+            }, trueFunction);
 
             return this;
         },
@@ -5841,9 +6421,28 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     needleData&&events.unRegister( needleData );
                 } catch(__error) { }
 
-            }, fns.true);
+            }, trueFunction);
 
             return this;
+        },
+
+        // attach an event once
+// todo: check the arguments
+        once: function once( eventName, qselector, callback ) {
+            var elm = this;
+
+            if( !_z.isFunction(callback) )
+                if( _z.isFunction(qselector) ) {
+                    callback = qselector,
+                        qselector = false;
+                } else return elm;
+
+            var cb = function callBackProxy() {
+                elm.un(eventName, qselector, cb);
+                return callback.apply(this, arguments);
+            };
+
+            return elm.on(eventName, qselector, cb);
         },
 
         // trigger event
@@ -5856,6 +6455,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var aliasQry =  (alias.length ? "." + alias.join(".") : "");
             evt = events.getEventName(evt);
 
+            events.lastEvent = version;
 
             return this.each( function( evtN, alias, elm ) {
                 if( alias.length ) {
@@ -5880,8 +6480,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     evt.initMouseEvent( evtN, true, true, _doc .defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
                     // this.dispatchEvent( evt );
                     events.dispatch.apply(this, [evt, { element: this, eventName: evtN, alias: alias }]);
-                } else if( hasVar(this, evtN) )
+                } else if( hasVar(this, evtN) ) {
                     this[ evtN ](); // IE Boss!
+                } else if( hasVar(this, "on" + evtN) )
+                    this[ "on" + evtN ](); // IE Boss!
+
             }, [ evt, alias, this ] );
         },
 
@@ -5909,12 +6512,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     if (_z.size(_elmentWithNS) == 0) return;
                     else
                         return _z.for(_elmentWithNS, function (_Index, _e) {
-                                    evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
+                            evtN = events.getEventName( !evtN  ? _e['eventName'] : evtN );
 
-                                    elm.callKEvent(evtN, evtD);
-                                });
+                            elm.callKEvent(evtN, evtD);
+                        });
                 }
 
+                events.lastEvent = version;
                 if( hasVar(document, 'createEvent') ) {
                     var keyboardEvent = document.createEvent("KeyboardEvent");
                     var initMethod = typeof(keyboardEvent.initKeyboardEvent) !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
@@ -5933,9 +6537,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     );
                     // this.dispatchEvent(keyboardEvent);
                     events.dispatch.apply(this, [keyboardEvent, { element: this, eventName: evtN, alias: alias }]);
-                }
-                else if( hasVar(this, evtN) )
+                } else if( hasVar(this, evtN) ) {
                     this[ evtN ](evtD, alias); // IE Boss!
+                } else if( hasVar(this, "on" + evtN) )
+                    this[ "on" + evtN ](evtD, alias); // IE Boss!
+
             }, [ evt, evtData, alias, this ] );
         },
 
@@ -5983,7 +6589,88 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return this;
         },
 
-    }, { // data
+    })
+        .prop();
+
+    // DOM functions
+    join({ // selection enabled/disabled
+        __selection: function __selection(mod) {
+            var mod = mod || 0;
+            var retFalse = [
+                function() { if(_z.cookie.get('selection')!='on') return false; },
+                function() { }
+            ];
+            this.each(function() {
+                if (typeof this.onselectstart != 'undefined') {
+                    this.onselectstart = retFalse[mod]||mod[0];
+                } else if (typeof this.style.MozUserSelect != 'undefined') {
+                    this.style.MozUserSelect = 'none';
+                } else {
+                    this.onmousedown = retFalse[mod]||mod[0];
+                }
+            });
+            return this;
+        },
+
+        selection: function selection(mod) {
+            if( !!!("cookie" in _z) ) return this;
+
+            var mod = mod || 0;
+            this.each(function() {
+                _z(this).parents().__selection(mod);
+            });
+            return this;
+        }
+    }, {
+        // element scrollTop
+        scrollTop: function scrollTop( element ) {
+            var element = getSet(element, this),
+                $return=[];
+
+            elmFunc.elmLoop( element, function( e ) {
+                var w = isWindow( e ) ? e :
+                    ( e.nodeType === 9 ? (e.defaultView || e.parentWindow) : false );
+
+                $return.push((
+                    w ? (('pageYOffset' in w) ? w[ 'pageYOffset' ] : w.document.documentElement[ 'scrollTop' ]) : e[ 'scrollTop' ]
+                ) || 0);
+
+            }, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
+
+            return element.length==1? $return[0] : $return;
+        },
+
+        // element scrollLeft
+        scrollLeft: function scrollLeft( element ) {
+            var element = getSet(element, this),
+                $return=[];
+
+            elmFunc.elmLoop( element, function( e ) {
+                var w = isWindow( e ) ? e :
+                    ( e.nodeType === 9 ? (e.defaultView || e.parentWindow) : false );
+
+                $return.push((
+                    w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'scrollLeft' ]) : e[ 'scrollLeft' ]
+                ) || 0);
+
+            }, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
+            return this.length==1? $return[0] : $return;
+        },
+
+    }, {
+        // offset
+        offset: function offset( ) {
+            var rect = this.rect.call( this );
+            return {
+                top: +( rect['top'] || 0),
+                left: +( rect['left'] || 0),
+            };
+        }
+    })
+        .prop();
+
+    // data functions
+    join({
         // get/set data for element
         data: function updateData( $var, $val ) {
             var elm = this,
@@ -6016,12 +6703,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     }
                     else if( !!$var && !!!$isVal )
                         if( !_z.isObject($var) ) // get data
-                            $return.push(
-                                (crnt_zIDData['data']&&_z.isset(crnt_zIDData['data'][$var]) ?
-                                    crnt_zIDData['data'][$var] : undefined )
-                            );
+                            $return.push( getSet( crnt_zIDData['data'][$var], undefined ) );
                         else { // set data
-                            crnt_zIDData['data'] = crnt_zIDData['data'] || { data: { } };
+                            crnt_zIDData['data'] = crnt_zIDData['data'] || { data: {}, idata: {} };
                             crnt_zIDData['data'] = _z.extend(crnt_zIDData['data'], $var);
                         }
                     else if( !!!$var && !!!$isVal ) // get all data
@@ -6042,98 +6726,30 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
                 if( !!$var && !!e[ version ] )
                     delete new_zID.data[ e[ version ] ]['data'][$var];
+                // else if( !!!$var && !!e[ version ] ) {
+                //     delete new_zID.data[ e[ version ] ];
+                //     delete e[ version ];
+                // }
                 else if( !!!$var && !!e[ version ] ) {
+                    new_zID.data[ e[ version ] ]['data'] = {};
+                }
+
+                if( _z.size(new_zID.data[ e[ version ] ]['idata']) == 0 && _z.size(new_zID.data[ e[ version ] ]['data']) == 0 ) {
                     delete new_zID.data[ e[ version ] ];
                     delete e[ version ];
                 }
-            }, fns.true);
+            }, trueFunction);
 
             return this;
         },
         removeData: function removeData( ) { return this.remData.apply( this, arguments ); },
         clearData: function removeData( ) { return this.remData.apply( this, arguments ); },
 
-    }, { // selection enabled/disabled
-        __selection: function __selection(mod) {
-            var mod = mod || 0;
-            var retFalse = [
-                function() { if(_z.cookie.get('selection')!='on') return false; },
-                function() { }
-            ];
-            this.each(function() {
-                if (typeof this.onselectstart != 'undefined') {
-                    this.onselectstart = retFalse[mod]||mod[0];
-                } else if (typeof this.style.MozUserSelect != 'undefined') {
-                    this.style.MozUserSelect = 'none';
-                } else {
-                    this.onmousedown = retFalse[mod]||mod[0];
-                }
-            });
-            return this;
-        },
+    })
+        .prop();
 
-        selection: function selection(mod) {
-            if( !!!("cookie" in _z) ) return this;
-
-            var mod = mod || 0;
-            this.each(function() {
-                _z(this).parents().__selection(mod);
-            });
-            return this;
-        }
-    } ].mix;
-
-    [ _z.$, {
-        // element scrollTop
-        scrollTop: function scrollTop( element ) {
-            // var element = fns._zturn( this, element ),
-            var element = element || this,
-                $return=[];
-
-            elmFunc.elmLoop( element, function( e ) {
-                var w = isWindow( e ) ? e :
-                    ( e.nodeType === 9 ? (e.defaultView || e.parentWindow) : false );
-
-                $return.push((
-                    w ? (('pageYOffset' in w) ? w[ 'pageYOffset' ] : w.document.documentElement[ 'scrollTop' ]) : e[ 'scrollTop' ]
-                ) || 0);
-
-            }, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
-
-            return element.length==1? $return[0] : $return;
-        },
-
-        // element scrollLeft
-        scrollLeft: function scrollLeft( element ) {
-            // var element = fns._zturn( this, element ),
-            var element = element || this,
-                $return=[];
-
-            elmFunc.elmLoop( element, function( e ) {
-                var w = isWindow( e ) ? e :
-                    ( e.nodeType === 9 ? (e.defaultView || e.parentWindow) : false );
-
-                $return.push((
-                    w ? (('pageXOffset' in w) ? w[ 'pageXOffset' ] : w.document.documentElement[ 'scrollLeft' ]) : e[ 'scrollLeft' ]
-                ) || 0);
-
-            }, (x)=>{ return _z.isDOM(x)||isWindow(x)||x.nodeType===9; });
-            return this.length==1? $return[0] : $return;
-        },
-
-    } ].mix;
-
-    [ _z.$, {
-        // offset
-        offset: function offset( ) {
-            var rect = this.rect.call( this );
-            return {
-                top: +( rect['top'] || 0),
-                left: +( rect['left'] || 0),
-            };
-        }
-    },
-
+    // shortcuts functions
+    join(
         // rect functions
         ...foreach("top left outerHeight outerHeightWP innerHeight height outerWidth outerWidthWP innerWidth width".split(' '), ( k, v )=>{
             return {
@@ -6194,85 +6810,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             return this;
         }
-    },
+    })
+        .prop();
 
-    ].mix;
-// _z.$ }
-
-
-// _z {
-
-    // add global functions to _z
-    [ _z, __zGlobalFunctions ].mix;
-
-    // add shared functions to _z
-    [ _z, __zFunctions ].mix;
-
-    // add serialize settings to _z
-    [ _z, __zSerializeSettings ].mix;
-
-    // add ajax & url tools functions to _z
-    [ _z, {
-        // hash from url
-        hash: function getHash( setHash ) {
-            if( _z.isset( setHash ) )
-                window.location.hash = _z.trim( setHash );
-
-            var hash = window.location.hash || "";
-            return hash.substr( 1 );
-        },
-
-        // object to url query
-        param: function param( object, perfix, parts ) {
-            var parts = parts || [],
-                perfix = perfix || false,
-                add = function( n, v ) {
-                    parts.push(
-                        encodeURIComponent( n ) + "=" +
-                        encodeURIComponent( _z.isFunction( v ) ? v() : (v == null && "" || v) )
-                    );
-                };
-
-            // append
-            if( perfix ) {
-                // array
-                if( typeOfVar( object ) === varsType.a ) {
-                    for( i = 0, len = object.length; i < len; i++ )
-                        if ( /\[\]$/.test( perfix ) )
-                            add( perfix, object[i] );
-                        else
-                            param( object[i], perfix + '[' + ( typeOfVar( object[i] ) === varsType.o ? i : '' ) + ']', parts );
-                }
-                // object
-                else if( typeOfVar( object ) === varsType.o ) {
-                    for( var prop in object )
-                        param( object[ prop ], perfix + '[' + prop + ']', parts );
-                }
-                // string
-                else add( perfix, object );
-            }
-            else if( typeOfVar( object ) === varsType.a ) {
-                // elements
-                elmFunc.elmLoop( object, function( e, v ) {
-                    if( e.name )
-                        add( e.name, e.value );
-                }, fns.true);
-            }
-            // init
-            else {
-                for( var prop in object )
-                    param( object[ prop ], prop, parts );
-            }
-
-            return parts.join( '&' ).replace( /%20/g, '+' );
-        },
-
-    },
-        __zAjax
-    ].mix;
-
+// todo: remove this
     // private usage
-    [ _z, {
+    join({
         privates: { private: true,
             // typeof `obj`
             type: function __type( obj ) {
@@ -6337,10 +6880,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             // elm function
             elmFunc: elmFunc,
         },
-    } ].mix;
+    })
+        .core();
 
     // Objects function
-    [ _z, {
+    join({
         // todo: optmize remove from `obj` the `attr`
         removeFrom: function removeFrom( obj, attr ) {
             if( arguments.length == 0 )
@@ -6395,7 +6939,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // is element== document
         isDocument: function isDocument( element ) {
-            return !!(element==doc);//!!(element==doc || element==doc.documentElement);
+            return !!(element instanceof Document || element==doc);//!!(element==doc || element==doc.documentElement);
         },
 
         // (`obj` == jQuery)
@@ -6406,14 +6950,21 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // (`obj` == DOMElement)
         isDOM: function isDOM(obj) {
-            var t = _z.privates.type( obj );
-            return ( !!( !!(t) && !!(t['dom']) ) );
+            obj = [ obj ];
+            var robj = obj.filter( (k)=>k && (Element&&(k instanceof Element) || ((k instanceof Object) && k.nodeType===1 && _z.isString(k.nodeName))) );
+            return obj.length == robj.length && obj.length > 0;
         },
 
         // (`obj` == DOMElement || Window)
         isDOMOW: function isDOMOrWindow(obj) {
-            var t = _z.privates.type( obj );
-            return ( !!( !!(t) && (!!(t['dom']) || !!(t['window'])) ) );
+            return _z.isDOM(obj) || _z.isWindow(obj);
+        },
+
+        // (`obj` == NodeElement)
+        isNode: function isNode(obj) {
+            obj = [ obj ];
+            var robj = obj.filter( (k)=>k && (Node&&(k instanceof Node) || ((k instanceof Object) && _z.isNumber(k.nodeType) && _z.isString(k.nodeName))) );
+            return obj.length == robj.length && obj.length > 0;
         },
 
         // all (typeof arguments) is equal
@@ -6470,12 +7021,10 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 object = obj;
             else if( _z.isFunction( obj ) )
                 return _z.hasProp( obj, needle );
-            else
-            {
-                try{
+            else {
+                try {
                     return arguments.callee.call( this, _z.extend({}, obj), needle, searchInKey );
-                } catch(e)
-                {
+                } catch(e) {
                     console.error(e);
                     return -1;
                 }
@@ -6573,8 +7122,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // from Object to likeArray
         toLikeArray: function toLikeArray( obj ) {
-            // var obj = fns._zturn( this, obj );
-            var obj = obj || this;
+            var obj = getSet(obj, this);
 
             if( _z.is_z( obj ) )
                 obj = obj.element();
@@ -6643,16 +7191,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
 
-    } ].mix;
-
-    // inject timer system to _z
-    [ _z, __zWindowAddons ].mix;
-
-    // inject timer system to window
-    [ window, __zWindowAddons ].mix;
+    })
+        .core();
 
     // _z features
-    [ _z, {
+    join({
         // _z.URLToBlob64( url_to_get, function_callback)
         // convert url to data base64
         URLToBlob64: function URLToBlob64(url, callback) {
@@ -6795,7 +7338,73 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         parse: parssing,
 
         // base64 en/decoder
-        base64: base64,
+        base64: {
+            // base64_encode
+            encode: function base64_encode( code ) {
+                // encoder polyfill
+                // [https://gist.github.com/999166] by [https://github.com/nignag]
+                if( !isset(window["btoa"]) )
+                    window.btoa = (function (input) {
+                        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
+                            InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
+                            str = String(input);
+                        for (
+                            // initialize result and counter
+                            var block, charCode, idx = 0, map = chars, output = '';
+                            // if the next str index does not exist:
+                            //   change the mapping table to "="
+                            //   check if d has no fractional digits
+                            str.charAt(idx | 0) || (map = '=', idx % 1);
+                            // "8 - idx % 1 * 8" generates the sequence 2, 4, 6, 8
+                            output += map.charAt( 63 & block >> 8 - idx % 1 * 8 )
+                        )
+                        {
+                            charCode = str.charCodeAt( idx += 3/4 );
+                            if( charCode > 0xFF )
+                                throw new InvalidCharacterError("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+
+                            block = block << 8 | charCode;
+                        }
+
+                        return output;
+                    }).bind(window);
+
+                return window.btoa( unescape( encodeURIComponent( code ) ) );
+            },
+
+            // base64_decode
+            decode: function base64_decode( code ) {
+                // decoder polyfill
+                // [https://gist.github.com/1020396] by [https://github.com/atk]
+                if( !isset(window["atob"]) )
+                    window.atob = (function (input) {
+                        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=',
+                            InvalidCharacterError = fns.newErrorType( 'InvalidCharacterError' ),
+                            str = String( input ).replace(/[=]+$/, ''); // #31: ExtendScript bad parse of /=
+
+                        if( str.length % 4 == 1 )
+                            throw new InvalidCharacterError("'atob' failed: The string to be decoded is not correctly encoded.");
+
+                        for (
+                            // initialize result and counters
+                            var bc = 0, bs, buffer, idx = 0, output = '';
+                            // get next character
+                            buffer = str.charAt( idx++ );
+                            // character found in table? initialize bit storage and add its ascii value;
+                            ~buffer && ( bs = bc % 4 ? bs * 64 + buffer : buffer,
+                                // and if not first of each 4 characters,
+                                // convert the first 8 bits to one ascii character
+                            bc++ % 4 ) ? output += String.fromCharCode( 255 & bs >> (-2 * bc & 6) ) : 0
+                        )
+                            // try to find character in table (0-63, not found => -1)
+                            buffer = chars.indexOf( buffer );
+
+                        return output;
+                    }).bind(window);
+
+                return decodeURIComponent( escape( window.atob( code ) ) );
+            },
+        },
 
         // get variables from location
         _GET: function _GET( variable ) {
@@ -6850,10 +7459,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         // return css selector from dom element
         cssSelector: cssSelector,
 
-    } ].mix;
+    })
+        .core();
 
     // loader include js, css, data
-    [ _z, {
+    join({
         // loaded files
         __loaders: [],
 
@@ -6909,11 +7519,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                             try {
                                 // _z.execScript({ src: url });
                                 _z( loadInBody ? "body" : "head" ).append('<script type="text/javascript" class="_z-loader" src="'+url+'"></script>');
-                            } catch (_err) { reject(err); }
+                            } catch (_err) { reject(_err); }
 
                             try {
                                 if(cb && _z.isFunction(cb)) cb();
-                            } catch (_err) { reject(err); }
+                            } catch (_err) { reject(_err); }
 
                             resolve(true);
                         });
@@ -6978,7 +7588,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             }
         })()
 
-    }, {
+    })
+        .core();
+
+    // document ready
+    join({
         ready_Blobs: {
             ajax: ()=>{ return [
                 "importScripts('"+_z._URL_("_z.js")+"');",
@@ -6986,7 +7600,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             ] },
             return: ()=>[ `self.onmessage = function (event) { self.postMessage(event.data); };` ]
         },
-        ready_workers: { 'return': [], 'ajax': [] },
+        ready_workers: { 'return': [], 'ajax': [], 'count': function () {
+                var _ajax = this["ajax"].filter(x=>x).length;
+                var _return = this["return"].filter(x=>x).length;
+                if( _ajax == 0 ) this["ajax"] = [];
+                if( _return == 0 ) this["return"] = [];
+                return _ajax + _return;
+            }},
         runWorker: function runWorker() {
             var wArray;
             var a1 = $this.ready_workers[(wArray='ajax')].filter(x=>!(x===false||!(!x['isCalled']||!x['isDone'])));
@@ -7073,7 +7693,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
             var $DOMContentLoaded = function() {
                 if(d.readyState == 'complete') {
-                    if( $this.runWorker() == 1 )
+                    if( $this.runWorker() == 1 || $this.ready_workers.count() == 0 )
                         cleanLoadinEvents();
                     else
                         setTimeout($DOMContentLoaded, 16);
@@ -7118,13 +7738,11 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return $this;
         },
 
-    } ].mix;
-
-    // declare system
-    [ _z, __zDeclare ].mix;
+    })
+        .core();
 
     // cookie system
-    [ _z, { // cookie
+    join({ // cookie
         cookie: {
             set: function (name, value, days) {
                 return this.setBySec(name, value, days * 24 * 60 * 60);
@@ -7169,8 +7787,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 return this.set(name, '', -1);
             }
         }
-    } ].mix;
-// _z }
+    })
+        .core();
+
 // disable [_z, {}].extend
     // _z.extend.status = false;
     _z.extend.status = true;

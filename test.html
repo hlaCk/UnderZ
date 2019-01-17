@@ -18,13 +18,52 @@
     </script>
 
     <script type="text/javascript">
-						
+		
 		// load plugin: inlineEdit
 		 _z
 			 .declare('inlineEdit', _z.$)
 			 .require({ js: [ './plugins/inlineEdit.jPlugin.js' ] })
 			 .init(fns.true); 
-		 
+		
+		// load plugin: hotkey
+		 _z
+			 .declare('hotkey', _z.$)
+			 .hook(_z)
+			 .require({ js: [ './plugins/hotkey.jPlugin.js' ] })
+			 .init(fns.true); 
+/*
+_z.hotkey({
+    code: "f",
+    desc: "Shift and F HK",
+    function: function(event) { 
+		console.log(event);
+	},
+    ctrl: false,
+    shift: true, 
+    alt: false, 
+    target: null
+});
+_z.hotkey({
+    code: "shift+f",
+    desc: "Shift and F HK",
+    function: function(event) { 
+		console.log(event);
+	}
+});
+_z.hotkey({
+    code: "shift+f",
+    function: function(event) { 
+		console.log(event);
+	}
+});
+_z("#text1").hotkey({
+    code: "shift+f",
+    function: function(event) { 
+		console.log(event);
+	}
+});
+*/
+
         // when document ready
         _z.ready(()=>{
 			// apply plugin input
@@ -84,12 +123,13 @@
         _z(".btnCTitle").un("click");
     });
 
-
-    // trigger click event
-    // _z(".btnCTitle").click(); // change document title to 'Change Title'
-    // _z("#button").click(); // alert 'Button clicked!' and change document title to 'Show Message & Change Title'
-    // _z(".btnUBEvent").click(); // change document title to 'Unbind "Change Title" event' and unbind click event on .btnCTitle button
 </script>
+<style>
+.p1t {
+	font-size: 16px;
+	background: red;
+}
+</style>
 <label id="label">Label</label>
 <span id="span1">
     <input type="text" value="Text" id="text1">
@@ -105,9 +145,9 @@
 <button class="btnCTitlet">Change Title</button>
 <button class="btnUBEventt">Unbind "Change Title" event</button>
 
-<p class="p1t">p1 line</p>
+<p class="p1t" style="">p1 line</p>
 <p class="p2t" inlineEdit>p2 line</p>
-<p class="p3t"><a href="index" aa>click</a></p>
+<p class="p3t"><a href="#clicked" aa>click</a></p>
 
 <button id="btn1t">Remove first line hover out</button>
 <button id="btn2t">Remove second line hover in</button>
