@@ -3,6 +3,18 @@
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
 (function( window, document ) {
+// new Date().getUnixTime() = Unix timestamp
+    if(typeof Date.prototype.getUnixTime !== 'function')
+        Date.prototype.getUnixTime = function() { return this.getTime()/1000|0; };
+
+// Date.now() = js timestamp
+    if(typeof Date.now !== 'function')
+        Date.now = function() { return (new Date()).getTime(); };
+
+// Date.time() = Unix timestamp
+    if(typeof Date.time !== 'function')
+        Date.time = function() { return new Date().getUnixTime(); };
+
 // Function.callSelf(...arguments) = Function.apply( Function, arguments )
     if(typeof Function.prototype.callSelf !== 'function')
         Function.prototype.callSelf = function() {
@@ -5250,18 +5262,19 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
         // is element hidden
-        isHidden: function isHidden() {
-            status = false;
+        isHidden: function isHidden( ret ) {
+            ret = ret || false;
+			status = false;
 
             if( this.length > 1 ) {
                 var elm = this,
                     $return=[];
 
                 elmFunc.elmLoop( elm, function( e ) {
-                    if( ret==true && _z(e).isShow() )
+                    if( ret==true && _z(e).isHidden() )
                         $return.push( e );
                     else if( ret!=true )
-                        $return.push( _z(e).isShow() );
+                        $return.push( _z(e).isHidden() );
                 });
 
                 return ret==true ? this.newSelector( $return ) : $return;
@@ -5271,7 +5284,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 var status = _z(this).hasClass( 'hidden' ) ? true :
                     ( /hidden|none/i.test( _z( this ).css( 'visibility' ) +" "+ _z( this ).css( 'display' ) ) );
 
-            status = ( ret==true && !!!status ) ? this : !!!status;
+            status = ( ret==true && !!status ) ? this : !!status;
 
             return status;
         },
@@ -7408,30 +7421,74 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         // get variables from location
         _GET: function _GET( variable ) {
-            if( !!!(location && doc.location) ) return false;
+			if( !!!(location && doc.location) ) return false;
 
-            try {
-                var q = ( location||doc.location ).search.substring( 1 ),
-                    asArray = [],
-                    p = [],
-                    getAll = ( !!!variable );
+			try {
+				var q = decodeURI( ( location||doc.location ).search.substring( 1 ) ),
+					asArray = [],
+					asArrayIndexing = [],
+					p = [],
+					getAll = ( !!!variable );
 
-                var v = q.split( "&" );
-                for( var i = 0, iv = v.length; i < iv; i++ ) {
-                    p = v[ i ].split( "=" );
-                    p[1] = ( p[1].indexOf('%20') != -1 ) ? decodeURIComponent( p[1] ) : p[1];
+				var v = q.split( "&" );
+				for( var i = 0, iv = v.length; i < iv; i++ ) {
+					p = v[ i ].split( "=" );
+					p[1] = ( p[1].indexOf('%20') != -1 ) ? decodeURIComponent( p[1] ) : p[1];
+					asArrayIndexing[ p[0] ] = isset(asArrayIndexing[ p[0] ]) ? [...parseArray(asArrayIndexing[ p[0] ]), p[1]] : p[1];
 
-                    if( getAll )
-                        asArray[ p[ 0 ] ] = p[ 1 ];
-                    else if( p[0] == variable )
-                        return p[1];
-                }
+					var _mainVar = p[0].indexOf("[") != -1 ? p[0].split("[")[0] : p[0];
+					if( p[0].indexOf("[") != -1 ) {
+						var _ps = p[0].split("["),
+							prv,
+							crnt = asArray,
+							_pVar = _ps.shift();
 
-                if( getAll )
-                    return asArray;
+						var _psArray = crnt = asArray;
+						prv = _pVar;
 
-                return '';
-            } catch (e) { return ''; }
+						for( var i2 = 0, iv2 = sizeOfAny(_ps); i2 < iv2; i2++ ) {
+							var _psv = _ps[ i2 ].replaceAll("]", "");
+							// console.log(_psv, _ps,i2);
+
+							if( isset(prv) ) {
+								crnt[ prv ] = getSet( crnt[ prv ], [] );
+								crnt = crnt[ prv ];
+							}
+
+							if( sizeOfAny(_psv) == 0 ) { // []
+								prv = crnt.push("") - 1;
+							} else {
+								crnt[ _psv ] = getSet(crnt[ _psv ], []);
+								prv = _psv;
+							}
+						}
+
+						asArray[ _pVar ] = getSet(asArray[ _pVar ], []);
+						asArray = mix(true, asArray, _psArray);
+
+						if( sizeOfAny(crnt[ prv ]) == 0 ) {
+							crnt[ prv ] = p[1];
+						} else {
+							crnt[ prv ].push(p[1]);
+						}
+					} else asArray[ p[ 0 ] ] = isset(asArray[ p[ 0 ] ]) ? asArray[ p[ 0 ] ] : p[ 1 ];
+				}
+
+				var _ret;
+				if( !getAll &&
+					isset(_ret=getSet.call(true,
+						asArray[ variable ],
+						asArray[ decodeURI(variable) ],
+						asArrayIndexing[ variable ],
+						asArrayIndexing[ decodeURI(variable) ],
+						undefined
+					)) ) return _ret;
+
+				if( getAll )
+					return TOV(this)==TOV.types.s ? asArrayIndexing : asArray;
+
+				return '';
+			} catch (e) { return ''; }
         },
 
         // get current file name from location
