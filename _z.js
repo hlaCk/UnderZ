@@ -9,8 +9,8 @@
 			value () { return this.getTime()/1000|0; },
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 // Date.now() = js timestamp
@@ -29,8 +29,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -42,8 +42,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -80,8 +80,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -97,8 +97,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -113,8 +113,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -127,8 +127,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -170,8 +170,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -188,8 +188,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
     }
@@ -209,8 +209,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -238,8 +238,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -256,8 +256,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -276,8 +276,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -304,8 +304,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -330,8 +330,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 // todo: wiki+
@@ -354,8 +354,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -384,8 +384,8 @@
 			},
 			
             enumerable: false,
-            configurable: false,
-            writable: false
+            configurable: true,
+            writable: true
 		});
 		
 
@@ -4377,22 +4377,41 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var start = function start() {
                 if( param.fired == true ) return this;
 
+                // search for ContentType
+                let hasContentType = false;
+                if( param.headers.getSize() > 0 ) {
+                    param.headers.each(( hKey, hVal ) => {
+                        if( ['content-type', 'contenttype'].includes( toLC(triming( hKey )) ) && !hasContentType )
+                            return !(hasContentType = true);
+                    });
+                }
+
                 if( toLC(param.type) != "get" ) {
                     xhr.open( param.type, ajax.config.urling( param.url + cacheVar ), param.async != false );
 
-                    if( param.processData === false && param.contentType === false) {
+                    // set Request Header
+                    if( param.headers.getSize() > 0 ) {
+                        param.headers.each(( hKey, hVal ) => {
+                            xhr.setRequestHeader( triming(hKey), triming(hVal) );
+                        });
+                    }
 
-                    } else if( param.contentType === true )
-                        xhr.setRequestHeader( 'Content-Type', param.contentType );
-                    else
+                    if( param.processData === false ) {
+
+                    }
+                    else if( param.processData === true && hasContentType === false ) {
                         xhr.setRequestHeader( 'Content-type', 'application/x-www-form-urlencoded' );
+                    }
                 } else
                     xhr.open( param.type, ajax.config.urling(param.url + ajax.config.params( param.data ) + '&' + cacheVar),
                         param.async != false );
 
                 if( param.data != null || param.data != undefined ) {
-                    xhr.send( ( param.processData === false && param.contentType === false ) ?
-                        param.data : ajax.config.params( param.data ) );
+                    xhr.send(
+                        param.processData === false
+                            ? param.data
+                            : ajax.config.params( param.data )
+                    );
                 } else xhr.send();
 
                 $this.xhrFuncsApply( 'always', false, [ xhr ]);
@@ -4819,8 +4838,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             global: true,
             processData: true,
             async: true,
-            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
-            // contentType: true,
+            headers: {
+                'Content-Type': "application/x-www-form-urlencoded; charset=UTF-8"
+            },
             data: {},
             timeout: 20000,
             fired: false,
