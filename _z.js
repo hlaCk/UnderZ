@@ -1,4 +1,4 @@
-// UnderZ 1.0.2 - JavaScript Library
+// UnderZ 1.0.3 - JavaScript Library
 // Copyright © 2008-2019 hlaCk (https://github.com/hlaCk)
 // Licensed under the GNU General Public License v3.0 (https://github.com/hlaCk/UnderZ/blob/master/LICENSE) license.
 
@@ -420,7 +420,7 @@ var
     globaljQuery = window["jQuery"] || new Function("return false"),
 
     // engine version - public var in _z.$.underZ, _z.$.newSelector.proto.underZNS
-    version = '1.0.2',
+    version = '1.0.3',
 
     // set prototype of function and return it - private function
     setFuncPrototype = function setFunctionPtoyotype(f, p) {
