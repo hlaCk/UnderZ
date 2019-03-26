@@ -4259,21 +4259,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         },
 
         params: function params( obj ) {
-            var parts = [];
-            if( arguments.length==2 )
-            {
-                parts.push( encodeURIComponent(arguments[0]) + '=' + encodeURIComponent(arguments[1]) );
-                return parts.join('&');
-            }
-
-            if( !_z.isObject(obj) )
-                return (obj).toString() || String(obj) || "";
-
-            for( var key in obj )
-                if( hasProp( obj, key ) )
-                    parts.push( encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]) );
-
-            return parts.join('&');
+            return _z.param(...arguments);
         },
 
         urling: function urling( url ) {
@@ -4327,7 +4313,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 }
 
             param['url'] += ( param['url'].indexOf('?') === -1 ? '?' : '&' );
-            var cacheVar = !!!param['cache'] ? "_cache=" + fns.time() + '&' : '';
+            var cacheVar = !!param['cache'] ? "_cache=" + fns.time() + '&' : '';
 
             param.async = param.async == undefined ? true : param.async;
 
@@ -4381,32 +4367,54 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 let hasContentType = false;
                 if( param.headers.getSize() > 0 ) {
                     param.headers.each(( hKey, hVal ) => {
-                        if( ['content-type', 'contenttype'].includes( toLC(triming( hKey )) ) && !hasContentType )
+                        if( ['x-requested-with', 'xrequestedwith'].includes( toLC(triming( hKey )) ) ) {
+                            delete param.headers[ hKey ];
+                            return;
+                        }
+
+                        if( ['content-type', 'contenttype'].includes( toLC(triming( hKey )) ) && !hasContentType ) {
+                            param.contentType = hVal;
+                            delete param.headers[ hKey ];
                             return !(hasContentType = true);
+                        }
                     });
                 }
 
                 if( toLC(param.type) != "get" ) {
                     xhr.open( param.type, ajax.config.urling( param.url + cacheVar ), param.async != false );
 
+                    if( param.processData === false && param.contentType === false) {
+
+                    } else if( param.processData === true && !!!param.contentType )
+                        xhr.setRequestHeader( 'Content-type', 'application/x-www-form-urlencoded' );
+                    else  if( !!param.contentType )
+                        xhr.setRequestHeader( 'Content-Type', param.contentType );
+
                     // set Request Header
                     if( param.headers.getSize() > 0 ) {
                         param.headers.each(( hKey, hVal ) => {
+                            if( ['content-type', 'contenttype'].includes( toLC(triming( hKey )) ) )
+                                return;
+
                             xhr.setRequestHeader( triming(hKey), triming(hVal) );
                         });
                     }
 
-                    if( param.processData === false ) {
-
-                    }
-                    else if( param.processData === true && hasContentType === false ) {
-                        xhr.setRequestHeader( 'Content-type', 'application/x-www-form-urlencoded' );
-                    }
+                    // if( param.processData === false ) {
+                    //
+                    // }
+                    // else if( param.processData === true && hasContentType === false ) {
+                    //     xhr.setRequestHeader( 'Content-type', 'application/x-www-form-urlencoded' );
+                    // }
                 } else
                     xhr.open( param.type, ajax.config.urling(param.url + ajax.config.params( param.data ) + '&' + cacheVar),
                         param.async != false );
 
+                xhr.setRequestHeader( 'X-Requested-With', 'XMLHttpRequest' );
+
                 if( param.data != null || param.data != undefined ) {
+                    // xhr.send( ( param.processData === false && param.contentType === false ) ?
+                    //     param.data : ajax.config.params( param.data ) );
                     xhr.send(
                         param.processData === false
                             ? param.data
@@ -4551,7 +4559,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 for( var i = 0; i < fnsLen; i++ ) {
                     fs = !!!deleteIt ? fnsList[i] : fnsList.shift();
                     if( _z.isFunction(fs) )
-                        fs.callSelf( this, ...(args || []));
+                        fs.callSelf( /*this,*/ ...(args || []));
                 }
         },
 
@@ -4750,7 +4758,28 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             var url = url || "",
                 data = data || false,
                 callback = callback || false,
-                tmp;
+                tmp,
+                _options = {};
+
+            if( arguments.length == 1 && _z.isObject( url )) {
+                let getFromObject = (obj, attr, def_val) => {
+                    if( hasVar(obj, attr) ) {
+                        let _return = obj[ attr ];
+                        delete obj[ attr ];
+                        return _return;
+                    } else return def_val || false;
+                };
+                _options = url;
+                url = getFromObject(_options, "url", '');
+                data = getFromObject(_options, "data", false);
+                callback = getFromObject(_options, "done", false);
+
+            }
+
+            if( _z.isFunction( data ) && !!!callback )
+                callback = data,
+                    data = {};
+
             if( _z.isFunction( data ) && !!!callback )
                 callback = data,
                     data = {};
@@ -4760,13 +4789,16 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     callback = data,
                     data = tmp,
                     tmp="";
+
             data = data || {};
-            tmp = _z.ajax({
+            _options = _z.mix({
                 dataType: 'text',
                 url: url||"",
                 type : 'POST',
                 data: data
-            });
+            }, _options);
+            // console.warn(_options);
+            tmp = _z.ajax( _options );
             if( callback )
                 tmp.done( callback );
 
@@ -4836,11 +4868,12 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             type: "GET",
             isLocal: false,
             global: true,
+            cache: true,
             processData: true,
             async: true,
-            headers: {
-                'Content-Type': "application/x-www-form-urlencoded; charset=UTF-8"
-            },
+            headers: {},
+            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+            // contentType: true,
             data: {},
             timeout: 20000,
             fired: false,
@@ -5011,8 +5044,9 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                     e.innerHTML = $val,
                         $return.push( e.innerHTML );
 
-                    if( _z.Array(_z($val).tagName(x=>x=="script")).length > 0 )
-                        _z.execScript( $val );
+                    let scriptElements = _z( $val ).filter( (_e) => _z( _e ).is( "script" ) );
+                    if( scriptElements.length > 0 )
+                        _z.execScript( scriptElements );
                 } else if( isset(e['innerHTML']) ) $return.push( e.innerHTML );
             });
 
