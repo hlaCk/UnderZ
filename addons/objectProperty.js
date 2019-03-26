@@ -1,4 +1,5 @@
 // assign property for an object
+
 _z
 	.declare('objectProperty')
 	.method(function( opt, value ) {
