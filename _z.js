@@ -1049,14 +1049,14 @@ var events = {
             if( elm.length ) {
                 var $this = this,
                     tester = tester&&_z.isFunction(tester) ? tester : (x)=>_z(x).isDOMElement( true );
-                if( elm.length == 1 && (e = elm[0]) ) {
+                // if( elm.length == 1 && (e = elm[0]) ) {
+                //     if( tester(e) )
+                //         ( $results.pushSetter = callback.apply( $this, [ e, 0 ]) );
+                // } else
+                elm.each(function( i, e ){
                     if( tester(e) )
-                        ( $results.pushSetter = callback.apply( $this, [ e, 0 ]) );
-                } else
-                    elm.each(function( i, e ){
-                        if( tester(e) )
-                            return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
-                    });
+                        return ( $results.pushSetter = callback.apply( $this, [ e, ...arguments ]) );
+                });
             }
 
             return $results;
@@ -6940,7 +6940,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
             return {
                 [v]: function( WP ) {
                     var rect = this.rect.call( this/* , [ ...arguments ].splice(1)  */);
-                    if( (toLC(v)=='outerheight' || toLC(v)=='outerwidth') && WP )
+                    if( (toLC(v)=='outerheight' || toLC(v)=='outerwidth') && WP && _z.isBoolean(WP) )
                         v += 'WP';
 
                     rect = rect&&rect[v] || 0;
@@ -6992,6 +6992,26 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
                 this.on( "mouseenter", enterCB );
             if( _z.isFunction(outCB) )
                 this.on( "mouseleave", outCB );
+
+            return this;
+        },
+
+        // form submit
+        submit: function onSubmit( event ) {
+            if( !arguments.length )
+                return this.trigger("submit");
+
+            if( _z.isFunction(event) ) {
+                let warpper = function submit( e ) {
+                    let res = event.call(this, ...arguments);
+                    if( res === false ) {
+                        console.error(this);
+                        e.preventDefault();
+                    }
+                };
+
+                this.on( "submit", warpper );
+            }
 
             return this;
         }

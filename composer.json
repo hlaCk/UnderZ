@@ -1,0 +1,13 @@
+{
+    "name": "hlack/underz",
+    "description": "A tiny Library With huge use",
+    "type": "library",
+    "license": "GNU General Public License v3.0",
+    "authors": [
+        {
+            "name": "hlaCk",
+            "email": "somaxy@gmail.com"
+        }
+    ],
+    "require": {}
+}

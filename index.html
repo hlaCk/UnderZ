@@ -14,11 +14,17 @@
         });
         // if you have jQuery comment this line
         $ = _z;
+        _z.getScript('./addons/jq.js');
     </script>
 
     <script type="text/javascript">
         // when document ready
         _z.ready(()=>{
+            // jquery methods * addon
+            _z
+                .declare('jq')
+                .require({ js: [ './addons/jq.js' ] });
+
             // load plugin: toggle blocks by click
             _z
                 .declare('toggleByClick', _z.$)
