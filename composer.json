@@ -9,5 +9,6 @@
             "email": "somaxy@gmail.com"
         }
     ],
+    "minimum-stability": "dev",
     "require": {}
 }
