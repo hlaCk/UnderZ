@@ -2,12 +2,13 @@
     "name": "hlack/underz",
     "description": "A tiny Library With huge use",
     "type": "library",
-    "license": "GNU General Public License v3.0",
+    "license": "GPL-3.0-only",
     "authors": [
         {
             "name": "hlaCk",
             "email": "somaxy@gmail.com"
         }
     ],
-    "require": {}
+    "minimum-stability": "dev",
+    "require": {},
 }
