@@ -9,6 +9,8 @@
             "email": "somaxy@gmail.com"
         }
     ],
-    "minimum-stability": "stabile",
-    "require": {}
+    "minimum-stability": "dev",
+    "require": {
+		"hlack/underz": "dev-master"
+	}
 }
