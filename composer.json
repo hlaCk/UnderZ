@@ -1,6 +1,6 @@
 {
     "name": "hlack/underz",
-    "description": "A tiny Library With huge use",
+    "description": "A tiny Library With huge use.",
     "type": "library",
     "license": "GPL-3.0-only",
     "authors": [
@@ -9,6 +9,6 @@
             "email": "somaxy@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stabile",
     "require": {}
 }
