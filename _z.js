@@ -487,8 +487,14 @@ var
 
         return val !== void 0 || typeof(val) !== 'undefined';
     },
-
-    // trim prototype - public function in _z.trim( String ) = trimmed String
+	
+	// toString `val` to String - public function in _z.toString( Object ), _z(Object).toString()
+	toString = function toString(val) {
+		val = arguments.length ? arguments[0] : this.val();
+		return String(val == null ? "" : val).toString();
+	},
+	
+	// trim prototype - public function in _z.trim( String ) = trimmed String
     triming = function trimString(str) {
         return ( str != undefined && str != null ) ? String(str).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '') : "";
     };
@@ -567,7 +573,17 @@ var
         ld_e.prototype = Error.prototype;
         return ld_e;
     })(),
-
+	
+	// reduce
+	// todo: make it accept object & arrayLike ...
+	reduce = function reduce(array, callback, iniVal, useZeroIndexAsIniVal) {
+		array   = _z.Array(array);
+		callback= _z.isFunction(callback) ? callback : (p, c, i, arr)=>p+c;
+		iniVal  = (useZeroIndexAsIniVal || false) ? array[0] : iniVal;
+		
+		return array.reduce(callback, iniVal||"");
+	},
+	
     // forEach
     foreach = function foreach( obj, cb, context ) {
         if( typeOfVar( obj ) == varsType.f ) {
@@ -2527,8 +2543,88 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
 
         return $join;
     };
-
-    join({
+	
+	// strings case & words
+	join({
+		// toWords `string` to array of words - public function in _z.toWords( String )
+		toWords: function toWords(string, wordSeparator = /(\b|\W)/g) {
+			wordSeparator = wordSeparator || /(\b|\W)/g;
+			return String(string).split(wordSeparator).filter(x => x);
+		},
+		
+		// reduceWords `string` apply callback for each word - public function in _z.reduceWords( String, Callback, ' ' )
+		reduceWords: function forEachWord(string, callback, wordSeparator) {
+			return reduce(_z.toWords(string, wordSeparator), callback, '');
+		},
+		
+		// ucWords `val` to upper case first char for each word - public function in _z.ucWords( String )
+		ucWords: function ucWords(str, lcWords = true) {
+			return reduce(_z.toWords(str), function (p, c, i, array) {
+				return toString(p) + _z.ucFirst(c, lcWords) + (i + 1 !== array.length ? " " : "");
+			});
+		},
+		
+		// ucFirst `val` to upper case first char - public function in _z.ucFirst( String )
+		ucFirst: function ucFirst(str, lcString = true) {
+			str = toString(str);
+			lcString && (str = toLC(str));
+			
+			return toUC(str[0]) + str.slice(1);
+		},
+		
+		// lcFirst `val` to lower case first char - public function in _z.lcFirst( String )
+		lcFirst: function lcFirst(str, ucString = false) {
+			str = toString(str);
+			ucString && (str = toUC(str));
+			
+			return toLC(str[0]) + str.slice(1);
+		},
+		
+		// capitalize = ucFirst
+		// String.capitalize
+		capitalize: function capitalize(string) {
+			return _z.ucFirst(toLC(toString(string)));
+		},
+		
+		// camelCase `string` to camelCase (camelCaseWord) - public function in _z.camelCase( String )
+		camelCase: function camelCase(string) {
+			return _z.reduceWords(string, function (prev, word, index) {
+				return toString(prev) + ((word = toLC(toString(word))) && index ? _z.ucFirst(word) : word);
+			}, /\W/g);
+		},
+		
+		// studlyCase `string` to studlyCase (StudlyCaseWord) - public function in _z.studlyCase( String )
+		studlyCase: function studlyCase(string) {
+			return _z.reduceWords(string, function (prev, word, index) {
+				return toString(prev) + _z.ucFirst(word = toLC(toString(word)));
+			}, /\W/g);
+		},
+		
+		// snakeCase `string` to snakeCase (snake_case_word) - public function in _z.snakeCase( String )
+		snakeCase: function snakeCase(string) {
+			return _z.reduceWords(string, function (prev, word, index) {
+				return toString(prev) + (index ? '_' : '') + toLC(toString(word));
+			}, /\W/g);
+		},
+		
+		// kebabCase `string` to kebabCase (kebab-case-word) - public function in _z.kebabCase( String )
+		kebabCase: function kebabCase(string) {
+			return _z.reduceWords(string, function (prev, word, index) {
+				return toString(prev) + (index ? '-' : '') + toLC(toString(word));
+			}, /\W/g);
+		},
+		
+		// titleCase `string` to titleCase (Title Case Word) - public function in _z.titleCase( String )
+		titleCase: function titleCase(string) {
+			return _z.reduceWords(string, function (prev, word, index) {
+				return toString(prev) + (index ? ' ' : '') + _z.ucFirst(word);
+			}, /\W/g);
+		},
+		
+	})
+		.core();
+	
+	join({
         // check if element has an attribute
         hasAttr: function hasAttr( elm, attrName ) {
             var args = fns.argsFix( arguments, this, undefined );
@@ -3241,8 +3337,7 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         .prop();
 
     join({
-
-        // String.trim
+	    // String.trim
         trim: function trimString( str ) {
             var tunning = fns.argsFix( arguments, this, undefined, true );
             arguments = tunning( "arguments" );
@@ -3448,7 +3543,13 @@ CSSSELECTOR.indexed(e) => "[name$=']'][name^='total[']"
         .core();
 
     join({
-        // object.hasOwnProperty
+        // String.toString
+        toString: toString,
+	
+	    // Array.reduce
+	    reduce: reduce,
+	
+	    // object.hasOwnProperty
         hasProp: hasProp,
 
         // var in obj
